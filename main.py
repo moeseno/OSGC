@@ -1,9 +1,12 @@
-from flask import Flask,render_template,request,redirect,session
+from flask import Flask,render_template,request,redirect,session,jsonify
 import jinja2
 import csv
 from datetime import timedelta
 
 settings={}
+waiting_room=[]
+active_matches={}
+
 def init(): #init function
 	with open("settings.txt") as o: #checks settings
 		values=o.readlines()
@@ -11,6 +14,7 @@ def init(): #init function
 			split_value=value.split(".") #splits each line of settings
 			if split_value[0]=="str": #interprets as string
 				settings[split_value[1]]=str(split_value[2])
+
 init()
 
 app=Flask(__name__)
@@ -163,14 +167,99 @@ def signup():
 
 @app.route("/login_test",methods=["GET"])
 def login_test():
+	#check if logged_in exists and set as false
+	if "logged_in" not in session:
+		session["logged_in"]=False
+
 	logged_in=session["logged_in"]
-	print(session)
 	return render_template(	
 		"login_test.html",
 		logged_in=logged_in
 		)
 
+
+
 @app.route("/logout",methods=["GET"])
 def logout():
 	session.clear()
 	return redirect("/")
+
+
+
+@app.route("/matchmaking",methods=["GET"])
+def matchmaking():
+	#check if logged_in exists and set as false
+	if "logged_in" not in session:
+		session["logged_in"]=False
+
+	#check if logged in
+	if session["logged_in"]:
+		#puts player in waiting room if they r not already in it
+		if session["username"]not in waiting_room:
+			waiting_room.append(session["username"])
+			print(waiting_room)
+
+		#check for other players in waiting room and puts them in a match
+		if len(waiting_room)>=2:
+
+			with open("match_id_counter.txt")as file:
+				match_id=str(int(file.read())+1)
+			with open("match_id_counter.txt","w")as file:
+				file.write(str(match_id))
+
+			#creates match and remove from waiting room
+			active_matches[match_id]={"players":2,"player1":waiting_room[0],"player2":waiting_room[1]}
+			waiting_room.pop(0)
+			waiting_room.pop(0)
+			return redirect(f"/match/{match_id}")
+
+		return render_template(
+			"matchmaking.html"
+			)
+	return redirect("/")
+
+
+
+@app.route("/match/<match_id>",methods=["GET","POST"])
+def match(match_id):
+	#check if logged_in exists and set as false
+	if "logged_in" not in session:
+		session["logged_in"]=False
+
+	print(1)
+	#check if logged in
+	if session["logged_in"]:
+		#assigns current user and opponent
+		user=session["username"]
+		match_data=active_matches[match_id]
+
+		#prevent unauthorized users from accessing match
+		if user not in match_data.values():
+			return redirect("/")
+
+		#check which player is opponent
+		if user==match_data["player1"]:
+			opponent=match_data["player2"]
+		elif user==match_data["player2"]:
+			opponent=match_data["player1"]
+
+		return render_template(
+			"match.html",
+			user=user,
+			opponent=opponent,
+			match_id=match_id
+			)
+	return redirect("/")
+
+
+@app.route("/check_for_match",methods=["GET"])
+def check_for_match():
+	user=session["username"]
+	#check if matched
+	for match_id,match_data in active_matches.items():
+		if user in match_data.values():
+			return jsonify({"matched":True,"match_id":match_id})
+
+	return jsonify({"matched":False})
+
+	
