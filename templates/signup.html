@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title></title>
+</head>
+<body>
+
+<h1>signup</h1>
+<br>
+<!-- signup form -->
+<form method="POST" action="/signup">
+	username:
+	<br>
+	<input type="text" name="username" placeholder="username">
+	<br>
+	password:
+	<br>
+	<input type="password" name="password" placeholder="password">
+	<br>
+	confirm password:
+	<br>
+	<input type="password" name="confirm" placeholder="confirm password">
+	<br>
+	<input type="submit" value="sign up">
+</form>
+<br>
+<!-- displays missing value if @ least 1 box is empty -->
+{%if missing_value%}
+<h2>missing value</h2>
+{%endif%}
+
+<!-- displays passwords dont match if passwords dont match -->
+{%if different_password%}
+<h2>passwords dont match</h2>
+{%endif%}
+
+<!-- displays username already exists if username already exists -->
+{%if username_exists%}
+<h2>username already exists</h2>
+{%endif%}
+
+</body>
+</html>

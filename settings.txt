@@ -1,0 +1,2 @@
+str.SECRET_KEY.dewu ioffcfduso
+str.SERVER_NAME.default
