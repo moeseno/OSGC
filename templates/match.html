@@ -3,9 +3,40 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" type="text/css" href="../static/stylesheet.css">
 	<title></title>
 </head>
-<body>
-match
+<body style="margin: 0;">
+
+<div class="name opponent-name">{{opponent_name}}</div>
+<div class="name username">{{username}}</div>
+<div class="toggle-chat-box" onclick="toggleChatBox()"></div>
+
+<div class="chat-container">
+	<div class="chatbox"></div>
+	<input type="text" name="chat-input" class="chat-input" placeholder="enter message">
+	<div class="send" onclick="send()"></div>
+</div>
+
+<div class="top-half">
+	<div class="card-container">
+		<div class="card"></div>
+		<div class="card"></div>
+		<div class="card"></div>
+	</div>
+</div>
+
+
+
+<div class="bottom-half">
+	<div class="card-container">
+		<div class="card"></div>
+		<div class="card"></div>
+		<div class="card"></div>
+	</div>
+</div>
+
+<script type="text/javascript" src="../static/match.js"></script>
+
 </body>
 </html>

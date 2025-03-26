@@ -1,7 +1,9 @@
+from flask_sock import Sock
 from flask import Flask,render_template,request,redirect,session,jsonify
 import jinja2
 import csv
 from datetime import timedelta
+import json
 
 settings={}
 waiting_room=[]
@@ -18,6 +20,7 @@ def init(): #init function
 init()
 
 app=Flask(__name__)
+sock=Sock(app)
 app.secret_key=settings["SECRET_KEY"]
 
 @app.route("/",methods=["GET"])
@@ -96,12 +99,24 @@ def signup():
 	missing_value=False
 	different_password=False
 	username_exists=False
+	username_too_long=False
 
 	if request.method=="POST":
 
 		#creates user and password confirmation
 		user={"username":request.form.get("username",""),"password":request.form.get("password","")}
 		confirm=request.form.get("confirm","")
+
+		#check if username is longer than 16 charaacters
+		if len(user["username"])>16:
+			username_too_long=True
+			return render_template(
+				"signup.html",
+				missing_value=missing_value,
+				different_password=different_password,
+				username_exists=username_exists,
+				username_too_long=username_too_long
+				)
 
 		#check if sth is missing, if yes, returns missing value true 
 		if "" in user.values():
@@ -110,7 +125,8 @@ def signup():
 				"signup.html",
 				missing_value=missing_value,
 				different_password=different_password,
-				username_exists=username_exists
+				username_exists=username_exists,
+				username_too_long=username_too_long
 				)
 		
 		#check if password matches confirm, if not, return different password true
@@ -120,7 +136,8 @@ def signup():
 				"signup.html",
 				missing_value=missing_value,
 				different_password=different_password,
-				username_exists=username_exists
+				username_exists=username_exists,
+				username_too_long=username_too_long
 				)
 
 		#get usernames
@@ -135,7 +152,8 @@ def signup():
 				"signup.html",
 				missing_value=missing_value,
 				different_password=different_password,
-				username_exists=username_exists
+				username_exists=username_exists,
+				username_too_long=username_too_long
 				)
 
 		#get uid for user
@@ -160,7 +178,8 @@ def signup():
 		"signup.html",
 		missing_value=missing_value,
 		different_password=different_password,
-		username_exists=username_exists
+		username_exists=username_exists,
+		username_too_long=username_too_long
 		)
 
 
@@ -197,7 +216,8 @@ def matchmaking():
 		#puts player in waiting room if they r not already in it
 		if session["username"]not in waiting_room:
 			waiting_room.append(session["username"])
-			print(waiting_room)
+
+		print(waiting_room)
 
 		#check for other players in waiting room and puts them in a match
 		if len(waiting_room)>=2:
@@ -208,11 +228,10 @@ def matchmaking():
 				file.write(str(match_id))
 
 			#creates match and remove from waiting room
-			active_matches[match_id]={"players":2,"player1":waiting_room[0],"player2":waiting_room[1]}
+			active_matches[match_id]={"players":2,"player1":waiting_room[0],"player2":waiting_room[1],"clients":[]}
 			waiting_room.pop(0)
 			waiting_room.pop(0)
 			return redirect(f"/match/{match_id}")
-
 		return render_template(
 			"matchmaking.html"
 			)
@@ -226,30 +245,30 @@ def match(match_id):
 	if "logged_in" not in session:
 		session["logged_in"]=False
 
-	print(1)
 	#check if logged in
 	if session["logged_in"]:
 		#assigns current user and opponent
-		user=session["username"]
+		username=session["username"]
 		match_data=active_matches[match_id]
 
 		#prevent unauthorized users from accessing match
-		if user not in match_data.values():
+		if username not in match_data.values():
 			return redirect("/")
 
 		#check which player is opponent
-		if user==match_data["player1"]:
-			opponent=match_data["player2"]
-		elif user==match_data["player2"]:
-			opponent=match_data["player1"]
+		if username==match_data["player1"]:
+			opponent_name=match_data["player2"]
+		elif username==match_data["player2"]:
+			opponent_name=match_data["player1"]
 
 		return render_template(
 			"match.html",
-			user=user,
-			opponent=opponent,
+			username=username,
+			opponent_name=opponent_name,
 			match_id=match_id
 			)
 	return redirect("/")
+
 
 
 @app.route("/check_for_match",methods=["GET"])
@@ -262,4 +281,26 @@ def check_for_match():
 
 	return jsonify({"matched":False})
 
-	
+
+
+@sock.route("/chat/match/<match_id>")
+def chat(ws,match_id):
+	while True:
+		#try recieving message
+		try:
+			json_message=ws.receive()
+			message=json.loads(json_message)
+
+			#check if is initial connection
+			if message=={'open':True}:
+				active_matches[match_id]["clients"].append(ws)
+			#formats the message and sends to all clients
+			else:
+				formatted_message=f"{message["user"]}: {message["text"]}"
+				for client in active_matches[match_id]["clients"]:
+					client.send(json.dumps(formatted_message))
+
+		#error handling
+		except (TypeError, json.JSONDecodeError) as e:
+			print(f"Error: {e}")
+			break
