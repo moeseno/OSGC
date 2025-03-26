@@ -41,5 +41,10 @@
 <h2>username already exists</h2>
 {%endif%}
 
+<!-- displays username too long if username longer than 16 characters -->
+{%if username_too_long%}
+<h2>username must be 16 charcters or shorter</h2>
+{%endif%}
+
 </body>
 </html>
