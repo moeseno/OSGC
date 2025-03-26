@@ -3,7 +3,7 @@
 
 ## What?
 
-Open Source Gacha Cards is cross-platform browser a card game i started developing on Mar 24, 2025. It is mean to be a gacha game that is ethical and does not exploit the player for money, hence why it is open source. In this game you can host your own servers (like in minecraft), which you are the admin of. Players can connect to your server and play on it with others that are on the same server. But this is no normal card game, as it would be way too boring and generic. I plan to make it unique by adding card trading, just like pokemon cards. the amount of cards on a server is decided by the host/admin, so it is a cards are supply (kind of like crypto).
+Open Source Gacha Cards is cross-platform browser a card game i started developing on Mar 24, 2025. It is mean to be a gacha game that is ethical and does not exploit the player for money, hence why it is open source. In this game you can host your own servers (like in minecraft), which you are the admin of. Players can connect to your server and play on it with others that are on the same server. But this is no normal card game, as it would be way too boring and generic. I plan to make it unique by adding card trading, just like pokemon cards. the amount of cards on a server is decided by the host/admin, so cards are supply (kind of like crypto).
 
 ## Why?
 
