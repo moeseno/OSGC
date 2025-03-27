@@ -28,18 +28,23 @@ function toggleChatBox(){
 function send(){
 	//get input
 	let text=document.getElementsByClassName("chat-input")[0].value;
+	
+	//check for not allowed characters and empty strings
 	if (text==''){
 		alert("enter something before sending");
 		return;
-	};
+	}else if (text.includes("<")||text.includes(">")){
+		alert("illegal character");
+		return;
+	}
 	//creates message
 	let message={
 		user:document.getElementsByClassName("username")[0].innerHTML,
 		text:text
 	};
 	//check for websocket state before sending and clearing chat input
-	if (socket.readyState===WebSocket.OPEN){
-		socket.send(JSON.stringify(message));
+	if (chatSocket.readyState===WebSocket.OPEN){
+		chatSocket.send(JSON.stringify(message));
 		document.getElementsByClassName("chat-input")[0].value = "";
 	}else{
         console.error("WebSocket connection is not open.");
@@ -55,20 +60,40 @@ function addMessage(text){
 	chatBox.append(message);
 };
 
+function exit(){
+	if (chatSocket.readyState===WebSocket.OPEN){
+		chatSocket.send(JSON.stringify(null));
+	};	
+};
+
+function redirect(){
+	window.location.href="/";
+};
 
 
-let socket=new WebSocket("ws://"+location.host+"/chat"+window.location.pathname);
+let chatSocket=new WebSocket("ws://"+location.host+"/chat"+window.location.pathname);
 
-//tell backend socket is open
-socket.addEventListener("open",(event)=>{
-	socket.send(JSON.stringify({"open":true}));
+//tell backend sockets are open
+chatSocket.addEventListener("open",(event)=>{
+	let message={
+		user:document.getElementsByClassName("username")[0].innerHTML,
+		text:"This user has connected!"
+	};
+	setTimeout(()=>{
+		chatSocket.send(JSON.stringify(message));
+	},1000);
+	
 });
-
 //handles message recieving
-socket.addEventListener("message",(event)=>{
+chatSocket.addEventListener("message",(event)=>{
     try{
         let receivedMessage=JSON.parse(event.data);
-        addMessage(receivedMessage)
+        if (receivedMessage.startsWith("SERVER: ")&&receivedMessage.endsWith(" has disconnected, redirecting in 5 seconds...")){
+        	addMessage(receivedMessage);
+        	setTimeout(redirect,5000);
+        }else{
+        	addMessage(receivedMessage);
+        };
     }catch(error){
         console.error("Error parsing message:",error);
     };

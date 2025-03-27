@@ -4,6 +4,7 @@ import jinja2
 import csv
 from datetime import timedelta
 import json
+import bleach
 
 settings={}
 waiting_room=[]
@@ -217,8 +218,6 @@ def matchmaking():
 		if session["username"]not in waiting_room:
 			waiting_room.append(session["username"])
 
-		print(waiting_room)
-
 		#check for other players in waiting room and puts them in a match
 		if len(waiting_room)>=2:
 
@@ -283,24 +282,51 @@ def check_for_match():
 
 
 
+
 @sock.route("/chat/match/<match_id>")
 def chat(ws,match_id):
-	while True:
-		#try recieving message
-		try:
-			json_message=ws.receive()
-			message=json.loads(json_message)
+	active_clients=active_matches[match_id]["clients"]
+	active_clients.append(ws)
 
-			#check if is initial connection
-			if message=={'open':True}:
-				active_matches[match_id]["clients"].append(ws)
-			#formats the message and sends to all clients
-			else:
-				formatted_message=f"{message["user"]}: {message["text"]}"
-				for client in active_matches[match_id]["clients"]:
-					client.send(json.dumps(formatted_message))
+	try:
+		while True:
+			try:
+				json_message=ws.receive()
+				if json_message==None:
+					print(2)
+					break
 
-		#error handling
-		except (TypeError, json.JSONDecodeError) as e:
-			print(f"Error: {e}")
-			break
+				message=json.loads(json_message)
+
+				if "text" in message:
+					if not message["text"]:
+						message["text"]=" "
+					message["text"]=bleach.clean(message["text"])
+					formatted_message=f"{message['user']}:{message['text']}"
+
+					valid_clients=[]
+					print(active_clients)
+					for client in active_clients:
+						print(1)
+						try:
+							client.send(json.dumps(formatted_message))
+							valid_clients.append(client)
+						except Exception:
+							pass
+					active_matches[match_id]["clients"]=valid_clients
+
+			except Exception as e:
+				print(f"An error occurred:{e}")
+				break
+			
+	finally:
+		for client in active_clients:
+			client.send(json.dumps(f"SERVER: {session["username"]} has disconnected, redirecting in 5 seconds..."))
+		active_clients.remove(ws)
+		if ws in active_matches[match_id]["clients"]:
+			active_matches[match_id]["clients"].remove(ws)
+			user_to_remove=session["username"]
+			key_to_remove=[key for key,value in active_matches[match_id].items() if value==user_to_remove]
+			for key in key_to_remove:
+				active_matches[match_id].pop(key)
+
