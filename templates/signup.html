@@ -46,5 +46,15 @@
 <h2>username must be 16 charcters or shorter</h2>
 {%endif%}
 
+<!-- displays bad username if username contains an illegal character -->
+{%if username_too_long%}
+<h2>username contains an illegal character</h2>
+{%endif%}
+
+<!-- displays error -->
+{%if error%}
+<h2>{{error}}</h2>
+{%endif%}
+
 </body>
 </html>
