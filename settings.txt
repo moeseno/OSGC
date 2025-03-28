@@ -1,2 +1,5 @@
 str.SECRET_KEY.dewu ioffcfduso
 str.SERVER_NAME.default
+str.DEFAULT_USERNAME.Unknown Player
+str.DEFAULT_OPPONENT_NAME.Unknown Opponent
+int.USERNAME_CHAR_LIMIT.16

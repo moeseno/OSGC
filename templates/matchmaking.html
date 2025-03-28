@@ -6,7 +6,11 @@
 	<title></title>
 </head>
 <body>
+{%if error%}
+{{error}}
+{%else%}
 matchmaking
+{%endif%}
 
 <script type="text/javascript" src="/static/check_for_match.js"></script>
 
