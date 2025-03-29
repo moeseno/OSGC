@@ -71,7 +71,8 @@ function redirect(){
 };
 
 
-let chatSocket=new WebSocket("ws://"+location.host+"/chat"+window.location.pathname);
+let protocol=window.location.protocol==="https:"?"wss://":"ws://";
+let chatSocket=new WebSocket(protocol+location.host+"/chat"+window.location.pathname);
 
 //tell backend sockets are open
 chatSocket.addEventListener("open",(event)=>{

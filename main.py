@@ -432,12 +432,6 @@ def chat(ws,match_id):
 
         #remove from active clients
         active_clients.remove(ws)
-
-        #removes disconneced user from active_matches[match_id]["clients"] and removes its uid and username pair
-        if ws in active_matches[match_id]["clients"]:
-            active_matches[match_id]["clients"].remove(ws)
-            user_to_remove=session["username"]
-            key_to_remove=[key for key,value in active_matches[match_id].items() if value==user_to_remove]
-            for key in key_to_remove:
-                active_matches[match_id].pop(key)
+        #remove match
+        active_matches.pop(match_id)
 
