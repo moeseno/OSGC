@@ -1,20 +1,17 @@
-//sets 1 card aspect ratio
 function setCardAspectRatio(card) {
 	let height=card.offsetHeight;
 	let width=0.714*height;
 	card.style.width=width+"px";
 };
 
-//calls function above to set all cards aspect ratio
-function setCardsAspectRatio(){
+function setCardsAspectRatio(){ 
 	let cards=document.getElementsByClassName("card")
 	for (var i=cards.length-1;i>=0; i--){
 		setCardAspectRatio(cards[i]);
 	};
 };
 
-//shows/hides the chatbox
-function toggleChatBox(){
+function toggleChatBox(){ 
 	let chatBox=document.getElementsByClassName("chat-container")[0];
 	let computedStyle=getComputedStyle(chatBox);
 	if (computedStyle.display=="none"){
@@ -24,12 +21,10 @@ function toggleChatBox(){
 	};
 };
 
-//sends messages thru websocket
 function send(){
-	//get input
-	let text=document.getElementsByClassName("chat-input")[0].value;
-	
-	//check for not allowed characters and empty strings
+	let textInput=document.getElementsByClassName("chat-input")[0];
+	let text=textInput.value;
+
 	if (text==''){
 		alert("enter something before sending");
 		return;
@@ -37,21 +32,18 @@ function send(){
 		alert("illegal character");
 		return;
 	}
-	//creates message
 	let message={
-		user:document.getElementsByClassName("username")[0].innerHTML,
+		type:"chat",
 		text:text
 	};
-	//check for websocket state before sending and clearing chat input
-	if (chatSocket.readyState===WebSocket.OPEN){
+	if (chatSocket && chatSocket.readyState===WebSocket.OPEN){
 		chatSocket.send(JSON.stringify(message));
 		document.getElementsByClassName("chat-input")[0].value = "";
 	}else{
-        console.error("WebSocket connection is not open.");
+        alert("WebSocket connection is not open.");
     };
 };
 
-//adds message to message box
 function addMessage(text){
 	let message=document.createElement("div");
 	let chatBox=document.getElementsByClassName("chatbox")[0];
@@ -61,9 +53,10 @@ function addMessage(text){
 };
 
 function exit(){
-	if (chatSocket.readyState===WebSocket.OPEN){
-		chatSocket.send(JSON.stringify(null));
-	};	
+	if (chatSocket && chatSocket.readyState===WebSocket.OPEN){
+        chatSocket.close(1000, "User exited");
+	}
+	redirect();
 };
 
 function redirect(){
@@ -72,34 +65,36 @@ function redirect(){
 
 
 let protocol=window.location.protocol==="https:"?"wss://":"ws://";
-let chatSocket=new WebSocket(protocol+location.host+"/chat"+window.location.pathname);
+let wsURL=protocol+location.host+"/chat/match/"+matchID;
+let chatSocket=new WebSocket(wsURL);
 
-//tell backend sockets are open
+
+
 chatSocket.addEventListener("open",(event)=>{
-	let message={
-		user:document.getElementsByClassName("username")[0].innerHTML,
-		text:"This user has connected!"
+	let authMessage={
+		type:"auth",
+		uid:uid
 	};
-	setTimeout(()=>{
-		chatSocket.send(JSON.stringify(message));
-	},1000);
-	
+	if (chatSocket.readyState===WebSocket.OPEN) {
+	    chatSocket.send(JSON.stringify(authMessage));
+    }
 });
-//handles message recieving
+
 chatSocket.addEventListener("message",(event)=>{
     try{
         let receivedMessage=JSON.parse(event.data);
-        if (receivedMessage.startsWith("SERVER: ")&&receivedMessage.endsWith(" has disconnected, redirecting in 5 seconds...")){
-        	addMessage(receivedMessage);
+        console.log(receivedMessage)
+        if (typeof receivedMessage === 'string' &&
+            receivedMessage.startsWith("SERVER: ") &&
+            receivedMessage.endsWith(" has disconnected, redirecting in 5 seconds...")){
+            addMessage(receivedMessage);
         	setTimeout(redirect,5000);
-        }else{
+        } else if (typeof receivedMessage === 'string') {
         	addMessage(receivedMessage);
-        };
+        }
     }catch(error){
-        console.error("Error parsing message:",error);
     };
 });
-
 
 
 setCardsAspectRatio();
