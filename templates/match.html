@@ -37,6 +37,12 @@
 	</div>
 </div>
 
+<script type="text/javascript">
+	let uid="{{ uid|e }}";
+	let username="{{ username|e|replace('\'', '\\\'')|replace('"', '\\"') }}";
+	let matchID="{{ match_id|e }}";
+</script>
+
 <script type="text/javascript" src="../static/match.js"></script>
 
 </body>

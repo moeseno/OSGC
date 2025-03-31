@@ -11,6 +11,24 @@ settings={}
 waiting_room=[]
 active_matches={}
 
+
+class Player():
+    """
+    Player object created when entering match
+
+    Attributes:
+        username (str): The player's username
+        uid (str): The player's uid
+        cards_list (list): The list of card objects the player is bringing into this match
+        client (websocket client thingy): The websocket client of the player
+    """
+    def __init__(self,username,uid,cards_list,client):
+        self.username=username
+        self.uid=uid
+        self.cards_list=cards_list
+        self.client=client
+
+
 def init(): #init function
     try:
         #checks settings
@@ -279,99 +297,87 @@ def logout():
 
 @app.route("/matchmaking",methods=["GET"])
 def matchmaking():
-    error=""
+    if "logged_in" not in session or not session["logged_in"]:
+        return redirect("/")
 
-    #check if logged_in exists and set as false
-    if "logged_in" not in session:
-        session["logged_in"]=False
+    user_dict={session["uid"]:session["username"]}
 
-    #check if logged in
-    if session["logged_in"]:
-        user={session["uid"]:session["username"]}
-        #puts player in waiting room if they r not already in it
-        if user not in waiting_room:
-            waiting_room.append(user)
+    if user_dict not in waiting_room:
+        waiting_room.append(user_dict)
 
-        #check for other players in waiting room and puts them in a match
-        if len(waiting_room)>=2:
+    if len(waiting_room)>=2:
+        with open("match_id_counter.txt") as file:
+            content=file.read().strip()
+            match_id=str(int(content)+1)
 
-            try:
-                #assigns match_id and counter +1
-                with open("match_id_counter.txt")as file:
-                    match_id=str(int(file.read())+1)
-                with open("match_id_counter.txt","w")as file:
-                    file.write(str(match_id))
+        with open("match_id_counter.txt","w") as file:
+            file.write(match_id)
 
-                #assigns uid and username of players
-                uid1=list(waiting_room[0].keys())[0]
-                username1=waiting_room[0][uid1]
+        uid1=list(waiting_room[0].keys())[0]
+        username1=waiting_room[0][uid1]
+        uid2=list(waiting_room[1].keys())[0]
+        username2=waiting_room[1][uid2]
 
-                uid2=list(waiting_room[1].keys())[0]
-                username2=waiting_room[1][uid2]
+        active_matches[match_id]={
+            "players":{
+                uid1:Player(username=username1,uid=uid1,cards_list=[],client=None),
+                uid2:Player(username=username2,uid=uid2,cards_list=[],client=None)
+            }
+        }
+ 
+        waiting_room.pop(0)
+        waiting_room.pop(0)
+ 
+        return redirect(f"/match/{match_id}")
 
-                #creates match and remove from waiting room
-                active_matches[match_id]={
-                    "players":2,
-                    uid1:username1,
-                    uid2:username2,
-                    "clients":[]
-                }
-                waiting_room.pop(0)
-                waiting_room.pop(0)
-                return redirect(f"/match/{match_id}")
-            except Exception as e:
-                error=f"An error occured: {e}"
+    return render_template(
+        "matchmaking.html"
+        )
 
-        return render_template(
-            "matchmaking.html",
-            error=error
-            )
     return redirect("/")
 
 
 
-@app.route("/match/<match_id>",methods=["GET","POST"])
+@app.route("/match/<match_id>",methods=["GET"])
 def match(match_id):
-    #check if logged_in exists and set as false
-    if "logged_in" not in session:
-        session["logged_in"]=False
+    if "logged_in" not in session or not session["logged_in"]:
+        return redirect("/")
 
-    #check if logged in
-    if session["logged_in"]:
-        #assign match data
-        match_data=active_matches.get(match_id,{})
+    if not match_id.isdigit():
+         return redirect("/")
 
-        #prevent unauthorized users from accessing match
-        if session["uid"] not in match_data.keys():
-            return redirect("/")
+    match_data=active_matches[match_id]
 
-        #assign current user
-        username=match_data[session["uid"]]
+    players=match_data["players"]
 
-        #assign opponent 
-        for uid in match_data.keys():
-            if uid!="players"and uid!="clients"and uid!=session["uid"]:
-                opponent_uid=uid
-                break
+    if session["uid"] not in players:
+        return redirect("/")
 
-        opponent_name=match_data[opponent_uid]
+    current_player=players[session["uid"]]
+    username=current_player.username
 
-        return render_template(
-            "match.html",
-            username=username,
-            opponent_name=opponent_name,
-            match_id=match_id
-            )
-    return redirect("/")
+    for uid,player in players.items():
+        if uid!=session["uid"]:
+            opponent_username=player.username
+            break
+
+    return render_template(
+        "match.html",
+        username=username,
+        opponent_username=opponent_username,
+        match_id=match_id,
+        uid=session["uid"]
+        )
 
 
 
 @app.route("/check_for_match",methods=["GET"])
 def check_for_match():
-    user=session["username"]
-    #check if matched
+    if "logged_in" not in session or not session["logged_in"]:
+        return jsonify({"matched":False})
+
     for match_id,match_data in active_matches.items():
-        if user in match_data.values():
+        if session["uid"] in match_data["players"]:
             return jsonify({"matched":True,"match_id":match_id})
 
     return jsonify({"matched":False})
@@ -380,58 +386,81 @@ def check_for_match():
 
 @sock.route("/chat/match/<match_id>")
 def chat(ws,match_id):
-    #get current match's clients
-    active_clients=active_matches[match_id]["clients"]
-
-    #add client to active_clients
-    if ws not in active_clients:
-        active_clients.append(ws)
-
     try:
+        if not match_id.isdigit() or match_id not in active_matches:
+            return
+
+        match_data=active_matches[match_id]
+        players=match_data["players"]
+
+        json_auth_message=ws.receive(timeout=10)
+        if json_auth_message is None:
+            ws.close()
+            return
+
+        auth_message=json.loads(json_auth_message)
+
+        if not isinstance(auth_message,dict) or auth_message.get("type")!="auth" or "uid" not in auth_message:
+            ws.close()
+            return
+
+        uid=auth_message["uid"]
+        if uid not in players:
+            ws.close()
+            return
+
+        player=players[uid]
+        if player.client is not None:
+            ws.close()
+            return
+
+        player.client=ws
+
         while True:
-            try:
-                #recieve message, break if no message
-                json_message=ws.receive()
-                if json_message==None:
-                    break
+            json_message=ws.receive()
+            if json_message is None: break
 
-                message=json.loads(json_message)
+            message=json.loads(json_message)
 
-                #check if message has keys text and user
-                if "text" in message and "user" in message:
-                    if not message["text"]:
-                        message["text"]=" "
-                    #clean message to prevent attacks
-                    message["text"]=bleach.clean(message["text"])
-                    #formats message
-                    formatted_message=f"{message['user']}:{message['text']}"
+            if isinstance(message,dict) and message.get("type")=="chat" and "text" in message:
+                cleaned_text=bleach.clean(message["text"]).strip()
 
-                    #tries sending message to every client and if not successful, passes
-                    for client in active_clients:
-                        try:
-                            client.send(json.dumps(formatted_message))
-                        except Exception:
-                            bad_clients.append(client)
-                            pass
+                username=player.username
+                formatted_message=f"{username}: {cleaned_text}"
 
-                else:
-                    print("ERROR: Message missing 'text' or 'user' key.")
-                    continue
+                message_to_send=json.dumps(formatted_message)
 
-            except Exception as e:
-                print(f"ERROR: {e}")
-                break
-            
+                current_clients=[p.client for p in players.values() if p.client is not None]
+                for client in current_clients:
+                    try:
+                        client.send(message_to_send)
+                    except Exception:
+                        for p_obj in players.values():
+                            if p_obj.client==client:
+                                p_obj.client=None
+
     finally:
-        #sends message to connected clients
-        for client in active_clients:
-            try:
-                client.send(json.dumps(f"SERVER: {session["username"]} has disconnected, redirecting in 5 seconds..."))
-            except Exception as e:
-                raise
+        try:
+            match_data=active_matches[match_id]
+            players=match_data["players"]
+            player=players[uid]
 
-        #remove from active clients
-        active_clients.remove(ws)
-        #remove match
-        active_matches.pop(match_id)
+            if player.client==ws:
 
+                player.client=None
+                disconnected_username=player.username
+
+                disconnect_message=f"SERVER: {disconnected_username} has disconnected, redirecting in 5 seconds..."
+                message_to_send=json.dumps(disconnect_message)
+
+                for p_obj in players.values():
+                    if p_obj.uid!=uid and p_obj.client is not None:
+                        try:
+                            p_obj.client.send(message_to_send)
+                        except Exception:
+                            p_obj.client=None
+                    
+                del active_matches[match_id]
+
+        except Exception:
+            pass
