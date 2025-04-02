@@ -88,53 +88,27 @@ def login():
             #check if sth is missing, if yes, returns missing value true 
             if "" in login_attempt.values():
                 missing_value=True
-                return render_template(
-                    "login.html",
-                    missing_value=missing_value,
-                    wrong_password=wrong_password,
-                    nonexistent_user=nonexistent_user,
-                    error=error
-                    )
 
             #find user
-            for user in users:
-                #check if username and password matches
-                if login_attempt["username"]==user["username"]:
-                    if login_attempt["password"]==user["password"]:
-                        session["username"]=user["username"]
-                        session["uid"]=user["uid"]
-                        session["logged_in"]=True
-                        return redirect("/")
-                    #if password does not match
-                    else:
-                        wrong_password=True
-                        return render_template(
-                            "login.html",
-                            missing_value=missing_value,
-                            wrong_password=wrong_password,
-                            nonexistent_user=nonexistent_user,
-                            error=error
-                            )
-            nonexistent_user=True
+            if not missing_value:
+                for user in users:
+                    #check if username and password matches
+                    if login_attempt["username"]==user["username"]:
+                        if login_attempt["password"]==user["password"]:
+                            session["username"]=user["username"]
+                            session["uid"]=user["uid"]
+                            session["logged_in"]=True
+                            return redirect("/")
+                        #if password does not match
+                        else:
+                            wrong_password=True
+                            break
+                else:
+                    nonexistent_user=True
+            
         #if error        
         except Exception as e:
             error=f"{e}"
-            return render_template(
-                "login.html",
-                missing_value=missing_value,
-                wrong_password=wrong_password,
-                nonexistent_user=nonexistent_user,
-                error=error
-                )
-
-        #if user not in users list
-        return render_template(
-            "login.html",
-            missing_value=missing_value,
-            wrong_password=wrong_password,
-            nonexistent_user=nonexistent_user,
-            error=error
-            )
 
     return render_template(
         "login.html",
@@ -164,103 +138,51 @@ def signup():
         #check if theres a bad character
         if user["username"]!=bleach.clean(user["username"])or user["username"]==settings["DEFAULT_USERNAME"]:
             bad_username=True
-            return render_template(
-                "signup.html",
-                missing_value=missing_value,
-                different_password=different_password,
-                username_exists=username_exists,
-                username_too_long=username_too_long,
-                bad_username=bad_username,
-                error=error
-                )
 
         #check if username is longer than 16 charaacters
         if len(user["username"])>settings["USERNAME_CHAR_LIMIT"]:
             username_too_long=True
-            return render_template(
-                "signup.html",
-                missing_value=missing_value,
-                different_password=different_password,
-                username_exists=username_exists,
-                username_too_long=username_too_long,
-                bad_username=bad_username,
-                error=error
-                )
 
         #check if sth is missing, if yes, returns missing value true 
         if "" in user.values():
             missing_value=True
-            return render_template(
-                "signup.html",
-                missing_value=missing_value,
-                different_password=different_password,
-                username_exists=username_exists,
-                username_too_long=username_too_long,
-                bad_username=bad_username,
-                error=error
-                )
         
         #check if password matches confirm, if not, return different password true
         if user["password"]!=confirm: 
             different_password=True
-            return render_template(
-                "signup.html",
-                missing_value=missing_value,
-                different_password=different_password,
-                username_exists=username_exists,
-                username_too_long=username_too_long,
-                bad_username=bad_username,
-                error=error
-                )
 
-        #get usernames
-        try:
-            with open("users.csv","r",newline="",encoding="utf-8") as file:
-                reader=csv.DictReader(file)
-                usernames=[row["username"] for row in reader]
+        #check if any errors
+        if not any([missing_value,different_password,username_too_long,bad_username]):
+            #get usernames
+            try:
+                with open("users.csv","r",newline="",encoding="utf-8") as file:
+                    reader=csv.DictReader(file)
+                    usernames=[row["username"] for row in reader]
 
-            #check if username alr exists
-            if user["username"] in usernames:
-                username_exists=True
-                return render_template(
-                    "signup.html",
-                    missing_value=missing_value,
-                    different_password=different_password,
-                    username_exists=username_exists,
-                    username_too_long=username_too_long,
-                    bad_username=bad_username,
-                    error=error
-                    )
+                #check if username alr exists
+                    username_exists=True
 
-            #get uid for user
-            with open("uid_counter.txt")as file:
-                uid=int(file.read())+1
-            with open("uid_counter.txt","w")as file:
-                file.write(str(uid))
+                if not username_exists:
+                    #get uid for user
+                    with open("uid_counter.txt")as file:
+                        uid=int(file.read())+1
+                    with open("uid_counter.txt","w")as file:
+                        file.write(str(uid))
 
-            #give uid to user
-            user["uid"]=uid
+                    #give uid to user
+                    user["uid"]=uid
 
-            #writes user into file
-            with open("users.csv","a",newline="",encoding="utf-8") as file:
-                fieldnames=["username","password","uid"]
-                writer=csv.DictWriter(file,fieldnames=fieldnames)
-                writer.writerow(user)
+                    #writes user into file
+                    with open("users.csv","a",newline="",encoding="utf-8") as file:
+                        fieldnames=["username","password","uid"]
+                        writer=csv.DictWriter(file,fieldnames=fieldnames)
+                        writer.writerow(user)
 
-            #redirects to login
-            return redirect("/login")
+                    #redirects to login
+                    return redirect("/login")
 
-        except Exception as e:
-            error=f"{e}"
-            return render_template(
-            "signup.html",
-            missing_value=missing_value,
-            different_password=different_password,
-            username_exists=username_exists,
-            username_too_long=username_too_long,
-            bad_username=bad_username,
-            error=error
-            )
+            except Exception as e:
+                error=f"{e}"
 
     return render_template(
         "signup.html",
