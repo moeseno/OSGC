@@ -7,15 +7,15 @@ Open Source Gacha Cards is cross-platform browser a card game I started developi
 
 ## Why?
 
-I always loved how fun gacha games are, but hated the predatory practices these companies usually use (eg. absurdly priced microtransactions, multiple currencies, annoying popups), so I decided to make my own game mostly inspired by Genshin's TCG and real life trading cards. I originally wanted to find a game that is one time purchase, no time-gating, grindy, pvp, and most importantly, has gacha elements. But after scouring the internet and all available app stores, I found exactly 0 of them that met even half my criteria. I had just thought that there was no demand for such game, but after going on the gachagaming subreddit, I soon discovered multiple posts of people asking if such a game existed, so i decided to make my own. My goal is to eventually (if this even gets any attention), set up a patreon and raise money buy my friend a new laptop, wsince he currently has an Intel Core i3 with integrated graphics.
+I always loved how fun gacha games are, but hated the predatory practices these companies usually use (eg. absurdly priced microtransactions, multiple currencies, annoying popups), so I decided to make my own game mostly inspired by Genshin's TCG and real life trading cards. I originally wanted to find a game that is one time purchase, no time-gating, grindy, pvp, and most importantly, has gacha elements. But after scouring the internet and all available app stores, I found exactly 0 of them that met even half my criteria. I had just thought that there was no demand for such game, but after going on the gachagaming subreddit, I soon discovered multiple posts of people asking if such a game existed, so I decided to make my own. My goal is to eventually (if this even gets any attention), set up a patreon and maybe make some money :).
 
 ## When?
 
-I don't have a release date yet, but i promise i'll be working on it every day.
+I don't have a release date yet, but I promise I'll be working on it every day.
 
 ## Who?
 
-I am a 15 year old teenager living in Hong Kong, as i am currently not going to school right now, i have plenty of free time, and I am basically available at least 14 hrs per day.
+I am a 15 year old teenager living in Hong Kong, as I am currently not going to school right now, I have plenty of free time, and I am basically available at least 14 hrs per day.
 
 ## How to contribute?
 
