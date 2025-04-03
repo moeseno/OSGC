@@ -8,7 +8,7 @@
 </head>
 <body style="margin: 0;">
 
-<div class="name opponent-name">{{opponent_name}}</div>
+<div class="name opponent-name">{{opponent_username}}</div>
 <div class="name username">{{username}}</div>
 <div class="toggle-chat-box" onclick="toggleChatBox()"></div>
 <div class="exit" onclick="exit()"></div>
@@ -20,27 +20,40 @@
 </div>
 
 <div class="top-half">
-	<div class="card-container">
-		<div class="card"></div>
-		<div class="card"></div>
-		<div class="card"></div>
-	</div>
+    <div class="card-container">
+        {% for card in opponent_cards %}
+        <div class="card opponent-card" onclick="setTarget(this,{{loop.index0}})"> 
+            {{card.name}}
+            <div class="hp">
+            	{{card.hp}}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
 </div>
 
 
 
 <div class="bottom-half">
 	<div class="card-container">
-		<div class="card"></div>
-		<div class="card"></div>
-		<div class="card"></div>
+		{% for card in cards %}
+        <div class="card player-card">
+            {{card.name}}
+            <div class="hp">
+            	{{card.hp}}
+            </div>
+            <button onclick="useAbility('{{uid}}',{{loop.index0}},1,'{{opponent_uid}}')"></button>
+            <button onclick="useAbility('{{uid}}',{{loop.index0}},2,'{{opponent_uid}}')"></button>
+            <button onclick="useAbility('{{uid}}',{{loop.index0}},3,'{{opponent_uid}}')"></button>
+        </div>
+        {% endfor %}
 	</div>
 </div>
 
 <script type="text/javascript">
-	let uid="{{ uid|e }}";
-	let username="{{ username|e|replace('\'', '\\\'')|replace('"', '\\"') }}";
-	let matchID="{{ match_id|e }}";
+	let uid="{{uid}}";
+	let matchID="{{match_id}}";
+    let nextActioningPlayerUid="{{next_actioning_player_uid}}";
 </script>
 
 <script type="text/javascript" src="../static/match.js"></script>
