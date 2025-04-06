@@ -126,3 +126,16 @@
 .targeted{
     background-color: yellow;
 }
+
+.defeated{
+  background-color: lightgray;
+}
+
+.turn-display{
+	position: absolute;
+	left: 195px;
+	bottom: 0px;
+	height: 20px;
+	width: 20px;
+	background-color: white;
+}
