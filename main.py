@@ -55,9 +55,15 @@ class Card():
         self.hp=hp
         self.speed=speed
 
+    def death_check(self,target):
+        if target.hp<=0:
+            target.hp=0
+            return True
+
     #ability 1: deals 1 damage
     def ability1(self,caster,opponent,target):
         target.hp-=1
+        death_status=self.death_check(target)
         #returns action data for clients
         return {
             "type":"action",
@@ -65,12 +71,14 @@ class Card():
             "targeted_player_uid":opponent.uid,
             "attacking_card_index":caster.cards_list.index(self),
             "targeted_card_index":opponent.cards_list.index(target),
-            "target_hp":target.hp
+            "target_hp":target.hp,
+            "death":death_status
         }
 
     #ability 2: deals 2 damage
     def ability2(self,caster,opponent,target):
         target.hp-=2
+        death_status=self.death_check(target)
         #returns action data for clients
         return {
             "type":"action",
@@ -78,12 +86,14 @@ class Card():
             "targeted_player_uid":opponent.uid,
             "attacking_card_index":caster.cards_list.index(self),
             "targeted_card_index":opponent.cards_list.index(target),
-            "target_hp":target.hp
+            "target_hp":target.hp,
+            "death":death_status
         }
 
     #ability 3: deals 3 damage
     def ability3(self,caster,opponent,target):
         target.hp-=3
+        death_status=self.death_check(target)
         #returns action data for clients
         return {
             "type":"action",
@@ -91,7 +101,8 @@ class Card():
             "targeted_player_uid":opponent.uid,
             "attacking_card_index":caster.cards_list.index(self),
             "targeted_card_index":opponent.cards_list.index(target),
-            "target_hp":target.hp
+            "target_hp":target.hp,
+            "death":death_status
         }
 
 
@@ -530,7 +541,7 @@ def chat(ws,match_id):
                 message=ability_method(attacking_player,targeted_player,targeted_card)
                 message_to_send=json.dumps(message)
 
-                #broadcast action result to all connected clients (original way)
+                #broadcast action result to all connected clients
                 current_clients=[p.client for p in players.values() if p.client is not None]
                 for client in current_clients:
                     try:

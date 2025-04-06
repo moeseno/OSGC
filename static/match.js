@@ -1,3 +1,15 @@
+// Run only once at match start.
+function setInitialCardsAsTargetable() {
+	let opponentCards=document.getElementsByClassName("opponent-card");
+
+	for (var i=0; i<opponentCards.length; i++) {
+		let card=opponentCards[i];
+		card.classList.add("targetable");
+	}
+}
+
+
+
 //sets the width of a single card based on its height to maintain aspect ratio
 function setCardAspectRatio(card) {
 	//get current height
@@ -88,17 +100,27 @@ function addMessage(text){
 
 
 
-//sets the visual target indicator on an opponent's card
-function setTarget(clickedCard,targetNumber){
-	//get all opponent card elements
+function clearTargets(){
 	let opponentCards=document.getElementsByClassName("opponent-card")
 	for (var i = opponentCards.length - 1; i >= 0; i--) {
 		opponentCards[i].classList.remove("targeted");
 	};
-	//add "targeted" class to the clicked card
-	clickedCard.classList.add("targeted");
-	//store the index of the targeted card globally
-    targetedCardIndex=targetNumber;
+};
+
+
+
+//sets the visual target indicator on an opponent's card
+function setTarget(clickedCard,targetNumber){
+	//only run the code if it is the players turn
+	if (nextActioningPlayerUid===uid){
+		//clear all targets
+		clearTargets();
+		//add "targeted" class to the clicked card
+		clickedCard.classList.add("targeted");
+		//store the index of the targeted card globally
+		console.log(targetNumber);
+	    targetedCardIndex=targetNumber;
+	};
 };
 
 
@@ -118,7 +140,7 @@ function useAbility(attackingPlayerUid,attackingCardIndex,abilityNumber,targeted
 		attackingPlayerUid:attackingPlayerUid,
 		attackingCardIndex:attackingCardIndex,
 		targetedPlayerUid:targetedPlayerUid,
-		targetedCardIndex:targetedCardIndex, //uses the globally set index
+		targetedCardIndex:targetedCardIndex,
 		abilityNumber:abilityNumber
 	};
 	//send message if socket is open
@@ -149,10 +171,34 @@ function setHp(actionData) {
 
 		//get all opponent card elements
 		let cards=document.getElementsByClassName("opponent-card")
-		//get the FIRST hp element 
+		//get the hp element 
 		let hp=cards[actionData["targeted_card_index"]].getElementsByClassName("hp")[0]
 		//update the hp display
 		hp.innerHTML=actionData["target_hp"]
+		if (actionData["target_hp"]<=0) {
+			death(cards[actionData["targeted_card_index"]]);
+		}
+	}
+};
+
+
+
+function death(cardElement) {
+	cardElement.onclick=null;
+	cardElement.classList.add("defeated");
+	cardElement.classList.remove("targetable");
+	cardElement.classList.remove("targeted");
+}
+
+
+
+function displayTurn(nextActioningPlayerUid){
+	turnDisplay=document.getElementsByClassName("turn-display")[0]
+	clearTargets()
+	if(nextActioningPlayerUid===uid){
+		turnDisplay.style.backgroundColor="green"
+	}else{
+		turnDisplay.style.backgroundColor="red"
 	}
 }
 
@@ -160,9 +206,9 @@ function setHp(actionData) {
 
 //closes the websocket connection and redirects the user
 function exit(){
-	//close socket gracefully if open
+	//close socket if open
 	if (socket && socket.readyState===WebSocket.OPEN){
-        socket.close(1000, "User exited"); //1000 is normal closure code
+        socket.close();
 	}
 	//redirect to homepage
 	redirect();
@@ -225,7 +271,8 @@ socket.addEventListener("message",(event)=>{
         	}else if(receivedMessage["type"]==="turn"){
                 // Update whose turn it is
                 nextActioningPlayerUid=receivedMessage["next_actioning_player_uid"];
-                console.log("It is now player " + nextActioningPlayerUid + "'s turn.");
+                displayTurn(nextActioningPlayerUid);
+
             }
         	
         }
@@ -236,8 +283,9 @@ socket.addEventListener("message",(event)=>{
 
 
 //initialize the index for the targeted card (used by setTarget and useAbility)
-let targetedCardIndex=0;
+let targetedCardIndex=-1;
 //set initial card aspect ratios on page load
 setCardsAspectRatio();
+displayTurn(nextActioningPlayerUid);
 //add event listener to reset aspect ratios on window resize
 window.addEventListener("resize", setCardsAspectRatio);
