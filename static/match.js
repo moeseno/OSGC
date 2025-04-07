@@ -105,6 +105,7 @@ function clearTargets(){
 	for (var i = opponentCards.length - 1; i >= 0; i--) {
 		opponentCards[i].classList.remove("targeted");
 	};
+	targetedCardIndex=false
 };
 
 
@@ -132,6 +133,11 @@ function useAbility(attackingPlayerUid,attackingCardIndex,abilityNumber,targeted
     if (attackingPlayerUid !== nextActioningPlayerUid) {
         alert("It's not your turn!");
         return;
+    }
+
+    if (targetedCardIndex===false){
+    	alert("No target selected")
+    	return;
     }
 
 	//prepare action message object, including the globally stored target index
@@ -163,10 +169,13 @@ function setHp(actionData) {
 		let cards=document.getElementsByClassName("player-card")
 		//get the collection of hp elements
 		let hp=cards[actionData["targeted_card_index"]].getElementsByClassName("hp")[0]
-		//attempt to set innerHTML on the collection (original error)
+		//attempt to set innerHTML on the collection
 		hp.innerHTML=actionData["target_hp"]
+		if (actionData["target_hp"]<=0) {
+			death(cards[actionData["targeted_card_index"]],uid);
+		}
 
-	//check if the current player was the attacker (meaning opponent's card was targeted)
+	//check if the current player was the attacker
 	}else if(actionData["attacking_player_uid"]===uid){
 
 		//get all opponent card elements
@@ -176,18 +185,24 @@ function setHp(actionData) {
 		//update the hp display
 		hp.innerHTML=actionData["target_hp"]
 		if (actionData["target_hp"]<=0) {
-			death(cards[actionData["targeted_card_index"]]);
+			death(cards[actionData["targeted_card_index"]],uid);
 		}
 	}
 };
 
 
 
-function death(cardElement) {
+function death(cardElement,cardOwnerUid) {
 	cardElement.onclick=null;
 	cardElement.classList.add("defeated");
 	cardElement.classList.remove("targetable");
 	cardElement.classList.remove("targeted");
+	if(cardOwnerUid===uid){
+		let abilityButtons=cardElement.getElementsByClassName("ability");
+		for (var i = abilityButtons.length - 1; i >= 0; i--) {
+			abilityButtons[i].remove();
+		}
+	}
 }
 
 
@@ -233,7 +248,7 @@ let socket=new WebSocket(wsURL);
 
 //event listener for when the websocket connection opens
 socket.addEventListener("open",(event)=>{
-	//prepare authentication message with user's uid (from html template)
+	//prepare authentication message with user's uid
 	let authMessage={
 		type:"auth",
 		uid:uid
@@ -283,7 +298,7 @@ socket.addEventListener("message",(event)=>{
 
 
 //initialize the index for the targeted card (used by setTarget and useAbility)
-let targetedCardIndex=-1;
+let targetedCardIndex=false;
 //set initial card aspect ratios on page load
 setCardsAspectRatio();
 displayTurn(nextActioningPlayerUid);
