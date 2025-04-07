@@ -139,3 +139,13 @@
 	width: 20px;
 	background-color: white;
 }
+
+.ability{
+	border-width: 2px;
+	padding: 0;
+	border-color: black;
+	background-color: gray;
+	width: 20%;
+	height: 20%;
+	border-style: solid;
+}

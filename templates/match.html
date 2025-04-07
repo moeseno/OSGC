@@ -43,9 +43,9 @@
             <div class="hp">
             	{{card.hp}}
             </div>
-            <button onclick="useAbility('{{uid}}',{{loop.index0}},1,'{{opponent_uid}}')"></button>
-            <button onclick="useAbility('{{uid}}',{{loop.index0}},2,'{{opponent_uid}}')"></button>
-            <button onclick="useAbility('{{uid}}',{{loop.index0}},3,'{{opponent_uid}}')"></button>
+            <button onclick="useAbility('{{uid}}',{{loop.index0}},1,'{{opponent_uid}}')" class="ability"></button>
+            <button onclick="useAbility('{{uid}}',{{loop.index0}},2,'{{opponent_uid}}')" class="ability"></button>
+            <button onclick="useAbility('{{uid}}',{{loop.index0}},3,'{{opponent_uid}}')" class="ability"></button>
         </div>
         {% endfor %}
 	</div>
