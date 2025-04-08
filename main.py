@@ -8,48 +8,30 @@ import bleach
 import sys
 import random
 
-#global dictionary for settings
 settings={}
-#global list for matchmaking queue
 waiting_room=[]
-#global dictionary for active games
 active_matches={}
 
-
-#represents a player in a match
 class Player():
-    """
-    Player object created when entering match
+    """Represents a player session in a match.
 
     Attributes:
-        username (str): The player's username
-        uid (str): The player's uid
-        cards_list (list): The list of card objects the player is bringing into this match
-        client (websocket client thingy): The websocket client of the player
+        username (str)
+        uid (str)
+        cards_list (list): Card objects for the match.
+        client: WebSocket connection.
     """
-    #player attributes: username, unique id, list of cards, websocket connection
     def __init__(self,username,uid,cards_list,client):
         self.username=username
         self.uid=uid
         self.cards_list=cards_list
-        #stores the websocket client object
         self.client=client
+        self.active_card_index=None
 
 
 
-#represents a game card
 class Card():
-    """
-    Base card object for all cards
-
-    Attributes:
-        name (str):
-        hp (int):
-        speed (int):
-
-    Has 3 base abilities
-    """
-    #card attributes: name, health points, speed
+    """Base object for game cards."""
     def __init__(self,name,hp,speed):
         self.name=name
         self.hp=hp
@@ -59,12 +41,11 @@ class Card():
         if target.hp<=0:
             target.hp=0
             return True
+        return False
 
-    #ability 1: deals 1 damage
     def ability1(self,caster,opponent,target):
         target.hp-=1
         death_status=self.death_check(target)
-        #returns action data for clients
         return {
             "type":"action",
             "attacking_player_uid":caster.uid,
@@ -75,11 +56,9 @@ class Card():
             "death":death_status
         }
 
-    #ability 2: deals 2 damage
     def ability2(self,caster,opponent,target):
         target.hp-=2
         death_status=self.death_check(target)
-        #returns action data for clients
         return {
             "type":"action",
             "attacking_player_uid":caster.uid,
@@ -90,11 +69,9 @@ class Card():
             "death":death_status
         }
 
-    #ability 3: deals 3 damage
     def ability3(self,caster,opponent,target):
         target.hp-=3
         death_status=self.death_check(target)
-        #returns action data for clients
         return {
             "type":"action",
             "attacking_player_uid":caster.uid,
@@ -107,102 +84,90 @@ class Card():
 
 
 
-#loads settings from settings.txt
-def init(): #init function
+#Loads settings from settings.txt into the global 'settings' dictionary.
+#Expects format: type.key.value (e.g., str.SECRET_KEY.mysecret) per line.
+#Exits application if format is incorrect or file read fails.
+def init():
     try:
-        #checks settings
         with open("settings.txt") as o:
             values=o.readlines()
             for value in values:
-                #splits each line of settings
                 split_value=value.split(".")
-                #error checks
                 if len(split_value)!=3:
                     sys.exit()
-                if ""in split_value:
+                if "" in split_value:
                     sys.exit()
-                #interprets settings
-                if split_value[0]=="str": #interprets as string
+                if split_value[0]=="str":
                     settings[split_value[1]]=str(split_value[2])
-                if split_value[0]=="int": #interprets as int
+                if split_value[0]=="int":
                     settings[split_value[1]]=int(split_value[2])
     except Exception as e:
-        #handle errors during initialization
+        #Re-raise exception on file read or processing error.
         raise e
 
-#run initialization
 init()
 
-#create flask app instance
 app=Flask(__name__)
-#initialize flask-sock
 sock=Sock(app)
-#set flask secret key from settings
+#Set Flask secret key from loaded settings.
 app.secret_key=settings["SECRET_KEY"]
 
-#route for the homepage
 @app.route("/",methods=["GET"])
 def index():
-    #ensure logged_in status is in session
+    #Initialize session login status if not present.
     if "logged_in" not in session:
         session["logged_in"]=False
-    #render index page
-    return render_template(
-        "index.html"
-        )
+    return render_template("index.html")
 
 
 
-#route for login (GET displays form, POST handles submission)
+#GET displays login form, POST handles login attempt.
 @app.route("/login",methods=["GET","POST"])
 def login():
-    #initialize error flags
+    #Flags for form feedback.
     missing_value=False
     wrong_password=False
     nonexistent_user=False
     error=""
 
-    #handle form submission
+    #Handle form submission.
     if request.method=="POST":
-        #get form data
         login_attempt={"username":request.form.get("username",""),"password":request.form.get("password","")}
 
         try:
-            #get users
+            #Read user data.
             with open("users.csv","r",newline="",encoding="utf-8") as file:
                 reader=csv.DictReader(file)
                 users=[row for row in reader]
 
-            #check if sth is missing, if yes, returns missing value true
+            #Check for empty fields.
             if "" in login_attempt.values():
                 missing_value=True
 
-            #find user
+            #Validate credentials if fields were provided.
             if not missing_value:
                 for user in users:
-                    #check if username and password matches
                     if login_attempt["username"]==user["username"]:
+                        #Username found, check password.
                         if login_attempt["password"]==user["password"]:
-                            #store user info in session on success
+                            #Login successful.
                             session["username"]=user["username"]
                             session["uid"]=user["uid"]
                             session["logged_in"]=True
-                            #redirect to homepage
                             return redirect("/")
-                        #if password does not match
                         else:
-                            #set wrong password flag
                             wrong_password=True
-                            break #stop checking users
-                #if loop finished without finding username/password match
+                            #Stop search after finding user with wrong password.
+                            break
+                #Executes ONLY if the loop completes without 'break' (username not found).
                 else:
                     nonexistent_user=True
 
-        #if error
+        #Handle potential file/processing errors.
         except Exception as e:
             error=f"{e}"
 
-    #render login page with appropriate error flags
+    #Render login page with feedback.
     return render_template(
         "login.html",
         missing_value=missing_value,
@@ -213,10 +178,10 @@ def login():
 
 
 
-#route for signup (GET displays form, POST handles submission)
+#GET displays signup form, POST handles signup attempt.
 @app.route("/signup",methods=["GET","POST"])
 def signup():
-    #initialize error flags
+    #Flags for form feedback.
     missing_value=False
     different_password=False
     username_exists=False
@@ -224,62 +189,59 @@ def signup():
     bad_username=False
     error=""
 
-    #handle form submission
+    #Handle form submission.
     if request.method=="POST":
-        #creates user and password confirmation
         user={"username":request.form.get("username",""),"password":request.form.get("password","")}
         confirm=request.form.get("confirm","")
 
-        #check if theres a bad character
+        #Sanitize and validate username against disallowed characters/names.
         if user["username"]!=bleach.clean(user["username"])or user["username"]==settings["DEFAULT_USERNAME"]:
             bad_username=True
-        #check if username is longer than 16 characters
+        #Validate username length.
         if len(user["username"])>settings["USERNAME_CHAR_LIMIT"]:
             username_too_long=True
-        #check if sth is missing, if yes, returns missing value true
+        #Check for empty fields.
         if "" in user.values():
             missing_value=True
-        #check if password matches confirm, if not, return different password true
+        #Check password confirmation match.
         if user["password"]!=confirm:
             different_password=True
 
-        #check if any errors
+        #Proceed only if initial validations pass.
         if not any([missing_value,different_password,username_too_long,bad_username]):
-            #get usernames
             try:
+                #Read existing usernames to check for duplicates.
                 with open("users.csv","r",newline="",encoding="utf-8") as file:
                     reader=csv.DictReader(file)
                     usernames=[row["username"] for row in reader]
 
-                #check if username alr exists
                 if user["username"] in usernames:
                     username_exists=True
 
-                #if username is available
+                #If username is available, create the user.
                 if not username_exists:
-                    #get uid for user
+                    #Generate next unique ID from a counter file.
                     with open("uid_counter.txt")as file:
                         uid=int(file.read())+1
                     with open("uid_counter.txt","w")as file:
                         file.write(str(uid))
 
-                    #give uid to user
                     user["uid"]=uid
 
-                    #writes user into file
+                    #Append new user data to the CSV.
                     with open("users.csv","a",newline="",encoding="utf-8") as file:
                         fieldnames=["username","password","uid"]
                         writer=csv.DictWriter(file,fieldnames=fieldnames)
                         writer.writerow(user)
 
-                    #redirects to login
+                    #Redirect to login page after successful signup.
                     return redirect("/login")
 
-            #handle file/processing errors
+            #Handle potential file/processing errors.
             except Exception as e:
                 error=f"{e}"
 
-    #render signup page with appropriate error flags
+    #Render signup page with feedback.
     return render_template(
         "signup.html",
         missing_value=missing_value,
@@ -292,116 +254,103 @@ def signup():
 
 
 
-#route for login test page (debugging)
+#Debugging route to check login status.
 @app.route("/login_test",methods=["GET"])
 def login_test():
-    #check if logged_in exists and set as false
     if "logged_in" not in session:
         session["logged_in"]=False
     logged_in=session["logged_in"]
-    #render test page
-    return render_template(
-        "login_test.html",
-        logged_in=logged_in
-        )
+    return render_template("login_test.html",logged_in=logged_in)
 
 
 
-#route for logging out
+#Logs the user out.
 @app.route("/logout",methods=["GET"])
 def logout():
-    #clear session data
     session.clear()
-    #redirect to homepage
     return redirect("/")
 
 
 
-#route for matchmaking page
+#Handles matchmaking: adds players to queue and creates matches.
 @app.route("/matchmaking",methods=["GET"])
 def matchmaking():
-    #redirect if not logged in
+    #Ensure user is logged in.
     if "logged_in" not in session or not session["logged_in"]:
         return redirect("/")
 
-    #prepare user data for waiting room
+    #User identifier for the waiting room.
     user_dict={session["uid"]:session["username"]}
 
-    #add user to waiting room if not already there
+    #Add user to queue if not already present.
     if user_dict not in waiting_room:
         waiting_room.append(user_dict)
 
-    #check if enough players are waiting
+    #Check if enough players are waiting to start a match.
     if len(waiting_room)>=2:
-        #generate new match id
+        #Generate the next unique match ID.
         with open("match_id_counter.txt") as file:
             content=file.read().strip()
             match_id=str(int(content)+1)
         with open("match_id_counter.txt","w") as file:
             file.write(match_id)
 
-        #get the first two players from the waiting room (original way)
+        #Extract details for the first two players in the queue.
         uid1=list(waiting_room[0].keys())[0]
         username1=waiting_room[0][uid1]
         uid2=list(waiting_room[1].keys())[0]
         username2=waiting_room[1][uid2]
 
-        #Determine who goes first randomly
+        #Randomly determine which player acts first.
         player_uids=[uid1,uid2]
         next_actioning_player_uid=random.choice(player_uids)
 
-        #create match entry in active_matches
+        #Create the match state in the global dictionary.
         active_matches[match_id]={
             "players":{
-                #initialize player 1 object
                 uid1:Player(username=username1,uid=uid1,cards_list=[Card(name="card1",hp=10,speed=10),Card(name="card2",hp=10,speed=10),Card(name="card3",hp=10,speed=10)],client=None),
-                #initialize player 2 object
                 uid2:Player(username=username2,uid=uid2,cards_list=[Card(name="card4",hp=10,speed=10),Card(name="card5",hp=10,speed=10),Card(name="card6",hp=10,speed=10)],client=None)
             },
             "next_actioning_player_uid":next_actioning_player_uid
         }
 
+        #Remove matched players from the waiting room.
         waiting_room.pop(0)
         waiting_room.pop(0)
 
-        #redirect players to the created match
+        #Redirect both players to their match page.
         return redirect(f"/match/{match_id}")
 
-    #render waiting page if not enough players
-    return render_template(
-        "matchmaking.html"
-        )
+    #If not enough players, render the waiting page.
+    return render_template("matchmaking.html")
 
 
 
-#route for the match page itself
+#Displays the main game interface for a specific match.
 @app.route("/match/<match_id>",methods=["GET"])
 def match(match_id):
-    #redirect if not logged in
+    #Redirect if not logged in.
     if "logged_in" not in session or not session["logged_in"]:
         return redirect("/")
-    #validate match_id format (original check)
+    #Validate match_id format.
     if not match_id.isdigit():
          return redirect("/")
-    #check if match exists (added check for safety, wasn't explicitly in original but good practice)
+    #Check if the requested match actually exists.
     if match_id not in active_matches:
-        return redirect("/") # Or handle error appropriately
+        return redirect("/")
 
-    #get match data
     match_data=active_matches[match_id]
     players=match_data["players"]
 
-    #verify user is part of this match
+    #Verify the logged-in user is a participant in this match.
     if session["uid"] not in players:
         return redirect("/")
 
-    #get current player details
     current_player=players[session["uid"]]
     username=current_player.username
     cards=current_player.cards_list
 
-    #find opponent details (original way)
-    #initialize opponent variables
+    #Iterate through players in the match to find the opponent's details.
     opponent_username=None
     opponent_uid=None
     opponent_cards=None
@@ -412,10 +361,9 @@ def match(match_id):
             opponent_cards=player.cards_list
             break
 
-    #Get the UID of the player whose turn it is
     next_actioning_player_uid=match_data["next_actioning_player_uid"]
 
-    #render match page with necessary data
+    #Render the match interface with all necessary game state data.
     return render_template(
         "match.html",
         username=username,
@@ -430,103 +378,99 @@ def match(match_id):
 
 
 
-#api endpoint for clients polling for match status
+#API endpoint for polling match status (used by waiting clients).
 @app.route("/check_for_match",methods=["GET"])
 def check_for_match():
-    #return false if not logged in
     if "logged_in" not in session or not session["logged_in"]:
         return jsonify({"matched":False})
 
-    #search active matches for the user's uid (original way)
     for match_id,match_data in active_matches.items():
         if session["uid"] in match_data["players"]:
-            #return match found status and id
+            #Match found for the user.
             return jsonify({"matched":True,"match_id":match_id})
 
-    #return false if user not found in any active match
+    #No active match found for the user.
     return jsonify({"matched":False})
 
 
 
-#websocket route for handling match communication (chat and actions)
+#WebSocket route for match communication (authentication, chat, actions).
 @sock.route("/chat/match/<match_id>")
 def chat(ws,match_id):
-    uid = None #will be set after authentication
+    #Will be populated after successful authentication.
+    uid=None
 
     try:
-        #validate match_id and check if match exists
-        if not match_id.isdigit() or match_id not in active_matches:
+        #Initial validation of match ID and existence.
+        if not match_id.isdigit()or match_id not in active_matches:
             ws.close()
             return
 
-        #get match data
         match_data=active_matches[match_id]
         players=match_data["players"]
 
-        #receive and validate authentication message
+        #Authenticate the connecting client via UID.
         json_auth_message=ws.receive(timeout=10)
         if json_auth_message is None:
             ws.close()
             return
         auth_message=json.loads(json_auth_message)
-        if not isinstance(auth_message,dict) or auth_message.get("type")!="auth" or "uid" not in auth_message:
+        if not isinstance(auth_message,dict)or auth_message.get("type")!="auth"or"uid"not in auth_message:
             ws.close()
             return
 
-        #get uid and verify player is in this match
         uid=auth_message["uid"]
         if uid not in players:
             ws.close()
             return
 
-        #get player object and check for existing connection
         player=players[uid]
+        #Prevent multiple connections for the same player.
         if player.client is not None:
             ws.close()
-            return #prevent multiple connections
+            return
 
-        #assign websocket connection to player
+        #Associate this WebSocket connection with the player object.
         player.client=ws
 
-        #main message loop
+        #Main loop processing incoming messages.
         while True:
             json_message=ws.receive()
-            #client disconnected if message is None
+            #Client disconnected if message is None.
             if json_message is None:
                 break
 
             message=json.loads(json_message)
 
-            #handle chat messages
-            if isinstance(message,dict) and message.get("type")=="chat" and "text" in message:
-                #sanitize and format chat message
+            #Handle chat messages.
+            if isinstance(message,dict)and message.get("type")=="chat"and"text"in message:
                 cleaned_text=bleach.clean(message["text"]).strip()
                 username=player.username
                 formatted_message=f"{username}: {cleaned_text}"
                 message_to_send=json.dumps(formatted_message)
 
-                #broadcast chat message to all connected clients in the match (original way)
-                current_clients=[p.client for p in players.values() if p.client is not None]
+                #Broadcast chat message to all currently connected clients in this match.
+                current_clients=[p.client for p in players.values()if p.client is not None]
                 for client in current_clients:
                     try:
                         client.send(message_to_send)
-                    except Exception: #handle potential disconnection during broadcast
+                    #Handle potential disconnection during broadcast.
+                    except Exception:
                         for p_obj in players.values():
                             if p_obj.client==client:
                                 p_obj.client=None
 
-            #handle game actions
-            elif isinstance(message,dict) and message.get("type")=="action":
-                #extract action details (original way)
+            #Handle game action messages.
+            elif isinstance(message,dict)and message.get("type")=="action":
                 ability_number=message["abilityNumber"]
                 attacking_player_uid=message["attackingPlayerUid"]
                 attacking_card_index=message["attackingCardIndex"]
                 targeted_player_uid=message["targetedPlayerUid"]
                 targeted_card_index=message["targetedCardIndex"]
+                active_card_index=message["activeCardIndex"]
 
-                #Its not their turn, ignore the action
+                #Ignore action if it's not the sending player's turn.
                 if attacking_player_uid!=match_data.get("next_actioning_player_uid"):
-                    #Skip to the next iteration of the loop
                     continue
 
                 attacking_card=players[attacking_player_uid].cards_list[attacking_card_index]
@@ -534,70 +478,153 @@ def chat(ws,match_id):
                 attacking_player=players[attacking_player_uid]
                 targeted_player=players[targeted_player_uid]
 
+                #Ignore action if attacking card index is not player's active card index
+                if active_card_index!=attacking_player.active_card_index:
+                    continue
+
+                #Dynamically call the specified ability method on the card.
                 ability_name=f"ability{ability_number}"
                 ability_method=getattr(attacking_card,ability_name)
 
-                #execute ability and get result message
-                message=ability_method(attacking_player,targeted_player,targeted_card)
-                message_to_send=json.dumps(message)
+                action_result=ability_method(attacking_player,targeted_player,targeted_card)
+                message_to_send=json.dumps(action_result)
 
-                #broadcast action result to all connected clients
-                current_clients=[p.client for p in players.values() if p.client is not None]
+                #Broadcast action result to all connected clients.
+                current_clients=[p.client for p in players.values()if p.client is not None]
                 for client in current_clients:
                     try:
                         client.send(message_to_send)
-                    except Exception: #handle potential disconnection
+                    #Handle potential disconnection during broadcast.
+                    except Exception:
                         for p_obj in players.values():
                              if p_obj.client==client:
                                  p_obj.client=None
 
-                # Determine the next player (the one who was targeted)
-                next_actioning_player_uid=targeted_player_uid
-                match_data["next_actioning_player_uid"]=next_actioning_player_uid # Update server state
 
-                # Prepare turn update message
+
+                #Update whose turn it is next (the player who was targeted).
+                next_actioning_player_uid=targeted_player_uid
+                match_data["next_actioning_player_uid"]=next_actioning_player_uid
+
+                #Prepare and broadcast the turn update message.
                 turn_update_message={
                     "type":"turn",
                     "next_actioning_player_uid":next_actioning_player_uid
                 }
                 turn_update_to_send=json.dumps(turn_update_message)
 
-                # Broadcast turn update to all connected clients
-                # Re-fetch clients in case one disconnected during action broadcast
-                current_clients=[p.client for p in players.values() if p.client is not None]
+                #Re-fetch clients in case one disconnected during action broadcast.
+                current_clients=[p.client for p in players.values()if p.client is not None]
                 for client in current_clients:
                     try:
                         client.send(turn_update_to_send)
-                    except Exception: # handle potential disconnection
+                    #Handle potential disconnection during broadcast.
+                    except Exception:
                         for p_obj in players.values():
                             if p_obj.client==client:
                                 p_obj.client=None
 
-    #cleanup block, runs on disconnect or error
+            #Handle card swap messages
+            elif isinstance(message,dict)and message.get("type")=="swap":
+                swapping_player_uid=message["swappingPlayerUid"]
+                opponent_uid=message["opponentUid"]
+                swap_target_card_index=message["swapTargetCardIndex"]
+
+                #Ignore swap if it's not the sending player's turn.
+                if swapping_player_uid!=match_data.get("next_actioning_player_uid"):
+                    continue
+
+                #Ignore swap if bad index
+                if swap_target_card_index>2 or swap_target_card_index<0 or not isinstance(swap_target_card_index,int):
+                    continue
+
+                swapping_player=players[swapping_player_uid]
+                opponent=players[opponent_uid]
+
+                #Ignore swap if swap target card is active card
+                if swap_target_card_index==swapping_player.active_card_index:
+                    continue
+                
+                #Set player's active card index as the one they swapped to
+                swapping_player.active_card_index=swap_target_card_index
+
+                #Construct message
+                message={
+                    "type":"swap",
+                    "swapping_player_uid":swapping_player.uid,
+                    "opponent_uid":opponent.uid,
+                    "swap_target_card_index":swapping_player.active_card_index
+                }
+                message_to_send=json.dumps(message)
+
+                #Broadcast action result to all connected clients.
+                current_clients=[p.client for p in players.values()if p.client is not None]
+                for client in current_clients:
+                    try:
+                        client.send(message_to_send)
+                    #Handle potential disconnection during broadcast.
+                    except Exception:
+                        for p_obj in players.values():
+                             if p_obj.client==client:
+                                 p_obj.client=None
+
+
+
+                #Update whose turn it is next.
+                next_actioning_player_uid=opponent_uid
+                match_data["next_actioning_player_uid"]=next_actioning_player_uid
+
+                #Prepare and broadcast the turn update message.
+                turn_update_message={
+                    "type":"turn",
+                    "next_actioning_player_uid":next_actioning_player_uid
+                }
+                turn_update_to_send=json.dumps(turn_update_message)
+
+                #Re-fetch clients in case one disconnected during action broadcast.
+                current_clients=[p.client for p in players.values()if p.client is not None]
+                for client in current_clients:
+                    try:
+                        client.send(turn_update_to_send)
+                    #Handle potential disconnection during broadcast.
+                    except Exception:
+                        for p_obj in players.values():
+                            if p_obj.client==client:
+                                p_obj.client=None
+
+
+
+    #Cleanup block: executes on disconnect or error within the try block.
     finally:
         try:
-            #re-fetch match data (original way)
-            match_data=active_matches[match_id]
-            players=match_data["players"]
-            player=players[uid]
+            #Ensure uid was set (i.e., authentication succeeded).
+            if uid and match_id in active_matches:
+                match_data=active_matches[match_id]
+                players=match_data["players"]
+                #Ensure player still exists in the potentially modified match_data.
+                if uid in players:
+                    player=players[uid]
 
-            #check if this is the active client for the player (original way)
-            if player.client==ws:
-                player.client=None #mark player as disconnected
-                disconnected_username=player.username
+                    #Only perform cleanup if the disconnecting ws is the one registered to the player.
+                    if player.client==ws:
+                        player.client=None #Mark player as disconnected in the game state.
+                        disconnected_username=player.username
 
-                #notify other players (original way)
-                disconnect_message=f"SERVER: {disconnected_username} has disconnected, redirecting in 5 seconds..."
-                message_to_send=json.dumps(disconnect_message)
-                for p_obj in players.values():
-                    if p_obj.uid!=uid and p_obj.client is not None:
-                        try:
-                            p_obj.client.send(message_to_send)
-                        except Exception:
-                            p_obj.client=None #mark other player disconnected if send fails
+                        #Notify the remaining player, if any, about the disconnection.
+                        disconnect_message=f"SERVER: {disconnected_username} has disconnected, redirecting in 5 seconds..."
+                        message_to_send=json.dumps(disconnect_message)
+                        other_player_disconnected=False
+                        for p_obj in players.values():
+                            if p_obj.uid!=uid and p_obj.client is not None:
+                                try:
+                                    p_obj.client.send(message_to_send)
+                                except Exception:
+                                    p_obj.client=None #Mark other player disconnected if send fails.
+                                    other_player_disconnected=True
 
-                #delete the match from active matches (original way)
-                del active_matches[match_id]
+                        #Remove the match entirely if either player disconnects.
+                        del active_matches[match_id]
 
+        #Ignore any exceptions during the cleanup process itself.
         except Exception:
             pass
