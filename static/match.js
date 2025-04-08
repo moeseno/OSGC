@@ -1,8 +1,7 @@
-// Run only once at match start.
-function setInitialCardsAsTargetable() {
+//Run only once at match start to make opponent cards initially clickable.
+function setInitialCardsAsTargetable(){
 	let opponentCards=document.getElementsByClassName("opponent-card");
-
-	for (var i=0; i<opponentCards.length; i++) {
+	for(var i=0;i<opponentCards.length;i++){
 		let card=opponentCards[i];
 		card.classList.add("targetable");
 	}
@@ -10,196 +9,254 @@ function setInitialCardsAsTargetable() {
 
 
 
-//sets the width of a single card based on its height to maintain aspect ratio
-function setCardAspectRatio(card) {
-	//get current height
+//Sets the width of a single card based on its height to maintain aspect ratio.
+function setCardAspectRatio(card){
 	let height=card.offsetHeight;
-	//calculate width based on fixed ratio (0.714)
 	let width=0.714*height;
-	//apply calculated width
 	card.style.width=width+"px";
-};
+}
 
 
 
-//applies aspect ratio calculation to all elements with class "card"
+//Applies aspect ratio calculation to all elements with class "card".
 function setCardsAspectRatio(){
-	//get all card elements
-	let cards=document.getElementsByClassName("card")
-	//loop through cards and apply individual aspect ratio setting
-	for (var i=cards.length-1;i>=0; i--){
+	let cards=document.getElementsByClassName("card");
+	for(var i=cards.length-1;i>=0;i--){
 		setCardAspectRatio(cards[i]);
-	};
-};
+	}
+}
 
 
 
-//toggles the visibility of the chat box container
+//Toggles the visibility of the chat box container.
 function toggleChatBox(){
-	//get chat container element
 	let chatBox=document.getElementsByClassName("chat-container")[0];
-	//get its current computed display style
 	let computedStyle=getComputedStyle(chatBox);
-	//if hidden, show it
-	if (computedStyle.display=="none"){
+	if(computedStyle.display=="none"){
 		chatBox.style.display="block";
-	//if shown, hide it
 	}else if(computedStyle.display=="block"){
 		chatBox.style.display="none";
-	};
-};
+	}
+}
 
 
 
-//sends a chat message via websocket
+//Sends a chat message via websocket after basic validation.
 function send(){
-	//get chat input element and its value
 	let textInput=document.getElementsByClassName("chat-input")[0];
 	let text=textInput.value;
 
-	//validate input: not empty
-	if (text==''){
+	//Prevent empty messages or messages with basic HTML tags.
+	if(text==''){
 		alert("enter something before sending");
 		return;
-	//validate input: no html tags (basic check)
-	}else if (text.includes("<")||text.includes(">")){
+	}else if(text.includes("<")||text.includes(">")){
 		alert("illegal character");
 		return;
 	}
-	//prepare chat message object
 	let message={
 		type:"chat",
 		text:text
 	};
-	//send message if socket is open
-	if (socket && socket.readyState===WebSocket.OPEN){
+	if(socket&&socket.readyState===WebSocket.OPEN){
 		socket.send(JSON.stringify(message));
-		//clear input field after sending
-		document.getElementsByClassName("chat-input")[0].value = "";
+		document.getElementsByClassName("chat-input")[0].value="";
 	}else{
-		//alert if connection is not open
         alert("WebSocket connection is not open.");
-    };
-};
+    }
+}
 
 
 
-//adds a message string to the chat display area
+//Adds a message string to the chat display area.
 function addMessage(text){
-	//create a new div for the message
 	let message=document.createElement("div");
-	//get the chatbox display area
 	let chatBox=document.getElementsByClassName("chatbox")[0];
-	//set the message content
 	message.innerHTML=text;
-	//add css class for styling
 	message.classList.add("message");
-	//append the new message div to the chatbox
 	chatBox.append(message);
-};
+}
 
 
 
 function clearTargets(){
-	let opponentCards=document.getElementsByClassName("opponent-card")
-	for (var i = opponentCards.length - 1; i >= 0; i--) {
+	let opponentCards=document.getElementsByClassName("opponent-card");
+	for(var i=opponentCards.length-1;i>=0;i--){
 		opponentCards[i].classList.remove("targeted");
-	};
-	targetedCardIndex=false
-};
+	}
+	targetedCardIndex=null;
+}
 
 
 
-//sets the visual target indicator on an opponent's card
+function clearPlayerActiveCards(){
+	let playerCards=document.getElementsByClassName("player-card");
+	for(var i=playerCards.length-1;i>=0;i--){
+		playerCards[i].classList.remove("active");
+	}
+	activeCardIndex=null;
+}
+
+
+
+function clearOpponentActiveCards(){
+	let opponentCards=document.getElementsByClassName("opponent-card");
+	for(var i=opponentCards.length-1;i>=0;i--){
+		opponentCards[i].classList.remove("active");
+	}
+}
+
+
+
+//Visually marks an opponent card as the target for an ability, if it's the player's turn.
 function setTarget(clickedCard,targetNumber){
-	//only run the code if it is the players turn
-	if (nextActioningPlayerUid===uid){
-		//clear all targets
+	//Only allow targeting if it is this player's turn.
+	if(nextActioningPlayerUid===uid){
 		clearTargets();
-		//add "targeted" class to the clicked card
 		clickedCard.classList.add("targeted");
-		//store the index of the targeted card globally
-		console.log(targetNumber);
+		//Store the index of the currently targeted card globally.
 	    targetedCardIndex=targetNumber;
-	};
-};
+	}
+}
 
 
 
-//sends an ability usage action via websocket
+//Sends an ability usage action via websocket after validation.
 function useAbility(attackingPlayerUid,attackingCardIndex,abilityNumber,targetedPlayerUid){
-
-	//Check if it is the current player's turn
-    if (attackingPlayerUid !== nextActioningPlayerUid) {
+	//Prevent action if it's not the player's turn.
+    if(attackingPlayerUid!==nextActioningPlayerUid){
         alert("It's not your turn!");
         return;
     }
-
-    if (targetedCardIndex===false){
-    	alert("No target selected")
+	//Prevent action if no target card is selected.
+    if(targetedCardIndex===null){
+    	alert("No target selected");
     	return;
     }
-
-	//prepare action message object, including the globally stored target index
+    //Prevent action if card is not active
+    if(attackingCardIndex!==activeCardIndex){
+    	return;
+    }
+	//Construct the action message payload.
 	let message={
 		type:"action",
 		attackingPlayerUid:attackingPlayerUid,
 		attackingCardIndex:attackingCardIndex,
 		targetedPlayerUid:targetedPlayerUid,
-		targetedCardIndex:targetedCardIndex,
-		abilityNumber:abilityNumber
+		targetedCardIndex:targetedCardIndex, //Uses the globally stored index.
+		abilityNumber:abilityNumber,
+		activeCardIndex:activeCardIndex
 	};
-	//send message if socket is open
-	if (socket && socket.readyState===WebSocket.OPEN){
+	//Send the action if the connection is active.
+	if(socket&&socket.readyState===WebSocket.OPEN){
 		socket.send(JSON.stringify(message));
 	}else{
-		//alert if connection is not open
         alert("WebSocket connection is not open.");
-    };
+    }
 }
 
 
 
-//updates the displayed HP of a card based on action data from server
-function setHp(actionData) {
-	//check if the current player's card was targeted
-	if (actionData["targeted_player_uid"]===uid){
+//Displays the card swap
+function displaySwap(swapData){
+	//Check if the current client's player was the one swapping.
+	if(swapData["swapping_player_uid"]===uid){
 
-		//get all player card elements
-		let cards=document.getElementsByClassName("player-card")
-		//get the collection of hp elements
-		let hp=cards[actionData["targeted_card_index"]].getElementsByClassName("hp")[0]
-		//attempt to set innerHTML on the collection
-		hp.innerHTML=actionData["target_hp"]
-		if (actionData["target_hp"]<=0) {
+		//Update the players displayed active card.
+		let cards=document.getElementsByClassName("player-card");
+		let swapTargetCard=cards[swapData["swap_target_card_index"]]
+		swapTargetCard.classList.add("active")
+		activeCardIndex=swapData["swap_target_card_index"]
+
+	//Check if the current client's player was the one attacking.
+	}else if(swapData["opponent_uid"]===uid){
+
+		//Update the opponents displayed active card.
+		clearOpponentActiveCards();
+		let cards=document.getElementsByClassName("opponent-card");
+		let swapTargetCard=cards[swapData["swap_target_card_index"]]
+		swapTargetCard.classList.add("active")
+
+	}
+}
+
+
+//Sends swap action via websocket after validation
+function swap(swappingPlayerUid,swapTargetCardIndex,opponentUid){
+	//Prevent swap if it's not the player's turn.
+    if(swappingPlayerUid!==nextActioningPlayerUid){
+        alert("It's not your turn!");
+        return;
+    }
+	//Prevent swap if no swap target card is selected.
+    if(swapTargetCardIndex===null){
+    	alert("No swap target selected");
+    	return;
+    }
+    //Prevent swapping to active card
+    if(swapTargetCardIndex===activeCardIndex){
+    	alert("Swap target is already the active card!")
+    	return;
+    }
+    clearPlayerActiveCards();
+	//Construct the action message payload.
+	let message={
+		type:"swap",
+		swappingPlayerUid:swappingPlayerUid,
+		opponentUid:opponentUid,
+		swapTargetCardIndex:swapTargetCardIndex
+	};
+	//Send the action if the connection is active.
+	if(socket&&socket.readyState===WebSocket.OPEN){
+		socket.send(JSON.stringify(message));
+	}else{
+        alert("WebSocket connection is not open.");
+    }
+}
+
+
+//Updates the displayed HP of a card after receiving action data from the server.
+function setHp(actionData){
+	//Check if the current client's player was the one targeted.
+	if(actionData["targeted_player_uid"]===uid){
+
+		//Update the targeted player card's HP display.
+		let cards=document.getElementsByClassName("player-card");
+		let hp=cards[actionData["targeted_card_index"]].getElementsByClassName("hp")[0];
+		hp.innerHTML=actionData["target_hp"];
+
+		//Handle card death if HP is zero or less.
+		if(actionData["target_hp"]<=0){
 			death(cards[actionData["targeted_card_index"]],uid);
 		}
 
-	//check if the current player was the attacker
+	//Check if the current client's player was the one attacking.
 	}else if(actionData["attacking_player_uid"]===uid){
 
-		//get all opponent card elements
-		let cards=document.getElementsByClassName("opponent-card")
-		//get the hp element 
-		let hp=cards[actionData["targeted_card_index"]].getElementsByClassName("hp")[0]
-		//update the hp display
-		hp.innerHTML=actionData["target_hp"]
-		if (actionData["target_hp"]<=0) {
+		//Update the targeted opponent card's HP display.
+		let cards=document.getElementsByClassName("opponent-card");
+		let hp=cards[actionData["targeted_card_index"]].getElementsByClassName("hp")[0];
+		hp.innerHTML=actionData["target_hp"];
+
+		//Handle card death if HP is zero or less.
+		if(actionData["target_hp"]<=0){
 			death(cards[actionData["targeted_card_index"]],uid);
 		}
 	}
-};
+}
 
 
-
-function death(cardElement,cardOwnerUid) {
+//Handles visual updates and disables interactions when a card reaches 0 HP.
+function death(cardElement,cardOwnerUid){
 	cardElement.onclick=null;
 	cardElement.classList.add("defeated");
 	cardElement.classList.remove("targetable");
 	cardElement.classList.remove("targeted");
+
+	//If the defeated card belongs to the current player, remove its ability buttons.
 	if(cardOwnerUid===uid){
 		let abilityButtons=cardElement.getElementsByClassName("ability");
-		for (var i = abilityButtons.length - 1; i >= 0; i--) {
+		for(var i=abilityButtons.length-1;i>=0;i--){
 			abilityButtons[i].remove();
 		}
 	}
@@ -207,100 +264,102 @@ function death(cardElement,cardOwnerUid) {
 
 
 
+//Updates the visual turn indicator based on whose turn it is.
 function displayTurn(nextActioningPlayerUid){
-	turnDisplay=document.getElementsByClassName("turn-display")[0]
-	clearTargets()
+	turnDisplay=document.getElementsByClassName("turn-display")[0];
+	clearTargets(); //Ensure no targets linger between turns.
+
+	//Set indicator color: green for player's turn, red for opponent's.
 	if(nextActioningPlayerUid===uid){
-		turnDisplay.style.backgroundColor="green"
+		turnDisplay.style.backgroundColor="green";
 	}else{
-		turnDisplay.style.backgroundColor="red"
+		turnDisplay.style.backgroundColor="red";
 	}
 }
 
 
 
-//closes the websocket connection and redirects the user
+//Closes the websocket connection and redirects the user to the homepage.
 function exit(){
-	//close socket if open
-	if (socket && socket.readyState===WebSocket.OPEN){
+	if(socket&&socket.readyState===WebSocket.OPEN){
         socket.close();
 	}
-	//redirect to homepage
 	redirect();
-};
+}
 
 
-
-//redirects the browser to the homepage
+//Redirects the browser to the homepage.
 function redirect(){
 	window.location.href="/";
-};
+}
 
 
-//determine websocket protocol (ws or wss)
+
+//Establish WebSocket connection for the match.
 let protocol=window.location.protocol==="https:"?"wss://":"ws://";
-//construct websocket url using host, path, and matchID from html template
 let wsURL=protocol+location.host+"/chat/match/"+matchID;
-//create new websocket connection
 let socket=new WebSocket(wsURL);
 
 
 
-//event listener for when the websocket connection opens
+//Send authentication details once the connection is established.
 socket.addEventListener("open",(event)=>{
-	//prepare authentication message with user's uid
 	let authMessage={
 		type:"auth",
 		uid:uid
 	};
-	//send authentication message immediately after opening
-	if (socket.readyState===WebSocket.OPEN) {
+	if(socket.readyState===WebSocket.OPEN){
 	    socket.send(JSON.stringify(authMessage));
     }
 });
 
 
 
-//event listener for messages received from the server
+//Handles incoming WebSocket messages from the server.
 socket.addEventListener("message",(event)=>{
-    //safely parse incoming json data
+    //Safely parse incoming JSON data.
     try{
         let receivedMessage=JSON.parse(event.data);
-        //check for server disconnect message format
-        if (typeof receivedMessage==="string" &&
-            receivedMessage.startsWith("SERVER: ") &&
+
+        //Handle server-generated disconnect notification strings.
+        if(typeof receivedMessage==="string"&&
+            receivedMessage.startsWith("SERVER: ")&&
             receivedMessage.endsWith(" has disconnected, redirecting in 5 seconds...")){
-            //display message and schedule redirect
             addMessage(receivedMessage);
-        	setTimeout(redirect,5000);
-        //check for regular chat message (string)
+        	setTimeout(redirect,5000); //Schedule redirect after delay.
+
+        //Handle regular chat messages (strings).
         }else if(typeof receivedMessage==="string"){
-        	//display chat message
         	addMessage(receivedMessage);
-        //check for action result message (object)
+
+        //Handle game state updates (objects).
         }else if(typeof receivedMessage==="object"){
 
+        	//Process action results (e.g., HP changes).
         	if(receivedMessage["type"]==="action"){
-        		//update card hp based on action data
         		setHp(receivedMessage);
+
+        	//Process turn updates.
         	}else if(receivedMessage["type"]==="turn"){
-                // Update whose turn it is
                 nextActioningPlayerUid=receivedMessage["next_actioning_player_uid"];
                 displayTurn(nextActioningPlayerUid);
 
+            }else if(receivedMessage["type"]==="swap"){
+            	displaySwap(receivedMessage);
             }
-        	
         }
-    //ignore messages that fail parsing or don't match expected formats
-    }catch(error){};
+    //Ignore messages that fail parsing or don't match expected formats.
+    }catch(error){}
 });
 
 
 
-//initialize the index for the targeted card (used by setTarget and useAbility)
-let targetedCardIndex=false;
-//set initial card aspect ratios on page load
+//Global variable to store the index of the player's selected target card.
+let targetedCardIndex=null;
+let activeCardIndex=null;
+
+//Initial setup on page load.
 setCardsAspectRatio();
 displayTurn(nextActioningPlayerUid);
-//add event listener to reset aspect ratios on window resize
-window.addEventListener("resize", setCardsAspectRatio);
+//Recalculate card aspect ratios when the browser window is resized.
+window.addEventListener("resize",setCardsAspectRatio);
