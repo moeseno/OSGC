@@ -3,11 +3,11 @@
 
 ## How to use
 
-1: Download the source code
-2: Make sure you have all the dependencies listed at the top of the main.py file installed
-3: Navigate to the folder containing the source code in your command prompt
-4: Type "flask --app main run" and press enter to run the server
-5: Click the link thatv pops up in the command prompt
+1. Download the source code
+2. Make sure you have all the dependencies listed at the top of the main.py file installed
+3. Navigate to the folder containing the source code in your command prompt
+4. Type "flask --app main run" and press enter to run the server
+5. Click the link thatv pops up in the command prompt
 
 ## What?
 
