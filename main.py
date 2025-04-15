@@ -1,12 +1,14 @@
 from flask_sock import Sock
 from flask import Flask,render_template,request,redirect,session,jsonify
 import jinja2
-import csv
 from datetime import timedelta
 import json
 import bleach
 import sys
 import random
+import math
+import os
+import csv
 
 settings={}
 waiting_room=[]
@@ -43,8 +45,16 @@ class Card():
             return True
         return False
 
-    def ability1(self,caster,opponent,target):
-        target.hp-=1
+    def damage_calc(self,opponent,target_index,damage_number):
+        if opponent.active_card_index==target_index:
+            return damage_number
+        elif opponent.active_card_index==None:
+            return 0
+        else:
+            return math.floor(damage_number/2)
+
+    def ability1(self,caster,opponent,target,target_index):
+        target.hp-=self.damage_calc(opponent,target_index,1)
         death_status=self.death_check(target)
         return {
             "type":"action",
@@ -56,8 +66,8 @@ class Card():
             "death":death_status
         }
 
-    def ability2(self,caster,opponent,target):
-        target.hp-=2
+    def ability2(self,caster,opponent,target,target_index):
+        target.hp-=self.damage_calc(opponent,target_index,2)
         death_status=self.death_check(target)
         return {
             "type":"action",
@@ -69,8 +79,8 @@ class Card():
             "death":death_status
         }
 
-    def ability3(self,caster,opponent,target):
-        target.hp-=3
+    def ability3(self,caster,opponent,target,target_index):
+        target.hp-=self.damage_calc(opponent,target_index,3)
         death_status=self.death_check(target)
         return {
             "type":"action",
@@ -394,6 +404,138 @@ def check_for_match():
 
 
 
+def read_cards(filepath):
+    card_dict={}
+    if not os.path.exists(filepath):
+        with open(filepath,"w",encoding="utf-8") as file:
+            pass
+    with open(filepath,"r",encoding="utf-8") as file:
+        for line in file:
+            line=line.strip()
+            parts=line.split('.')
+            card_name=parts[0]
+            count=int(parts[1])
+            if count>0:
+                card_dict[card_name]=card_dict.get(card_name,0)+count
+    return card_dict
+
+def write_cards(filepath, card_dict):
+    os.makedirs(os.path.dirname(filepath),exist_ok=True)
+    sorted_card_names=sorted(card_dict.keys())
+    with open(filepath,'w',encoding='utf-8') as file:
+        for card_name in sorted_card_names:
+            count=card_dict[card_name]
+            if count>0:
+                f.write(f"{card_name}.{count}\n")
+
+
+@app.route('/inventory', methods=['GET', 'POST'])
+def inventory():
+    not_enough_cards=False
+    validation_failed=False
+
+    if "logged_in" not in session or not session["logged_in"]:
+        return redirect("/login")
+
+    player_dir=f"inventories/{session['uid']}"
+    active_path=f"{player_dir}/active_cards"
+    inactive_path=f"{player_dir}/inactive_cards"
+
+    if not os.path.isdir(player_dir):
+        os.makedirs(player_dir)
+
+    current_active_dict=read_cards(active_path)
+    current_inactive_dict=read_cards(inactive_path)
+
+    all_owned_dict=current_inactive_dict.copy()
+    for name,count in current_active_dict.items():
+        all_owned_dict[name]=all_owned_dict.get(name,0)+count
+
+
+    if request.method=='POST':
+        slot1_card=request.form.get('slot1',"").strip()
+        slot2_card=request.form.get('slot2',"").strip()
+        slot3_card=request.form.get('slot3',"").strip()
+
+        potential_active_cards_list=[card for card in [slot1_card, slot2_card, slot3_card] if card]
+
+        if len(potential_active_cards_list)!=3:
+            not_enough_cards=True
+            return render_template(
+                'inventory.html', uid=session['uid'],
+                all_cards_dict=all_owned_dict,
+                active_cards_dict=current_active_dict,
+                inactive_cards_dict=current_inactive_dict,
+                not_enough_cards=not_enough_cards,
+                validation_failed=validation_failed
+            )
+
+        # Create an empty dictionary to store the counts of cards selected in the slots
+        selected_cards={}
+        # Loop through each card name submitted from the slots (e.g., ['Blue', 'Red', 'Blue'])
+        for card in potential_active_cards_list:
+            # For the current card name ('card'):
+            # - Try to get its current count from 'selected_cards'.
+            # - If the card isn't in the dictionary yet (first time seeing it), use 0 as the starting count.
+            # - Add 1 to this count (either the existing one or 0).
+            # - Store the new count back into 'selected_cards' with the card name as the key.
+            selected_cards[card]=selected_cards.get(card,0)+1
+            # Example after loop: selected_cards might be {'Blue': 2, 'Red': 1}
+
+        # Now loop through the counts calculated for the selected cards
+        for card_name, selected_count in selected_cards.items():
+            # Check if the number of times this card was selected ('selected_count')
+            # is greater than the number the player actually owns.
+            # - 'all_owned_dict.get(card_name, 0)' retrieves the count of this card from the player's total inventory.
+            # - It defaults to 0 if the player doesn't own any cards with this name, preventing errors.
+            if selected_count>all_owned_dict.get(card_name, 0):
+                # If the player selected more than they own, set the flag to indicate validation failed
+                validation_failed=True
+                break
+
+        if validation_failed:
+             return render_template(
+                'inventory.html',
+                uid=session['uid'],
+                all_cards_dict=all_owned_dict,
+                active_cards_dict=current_active_dict,
+                inactive_cards_dict=current_inactive_dict,
+                not_enough_cards=not_enough_cards,
+                validation_failed=validation_failed
+             )
+
+        new_active_dict=selected_cards
+
+        # Calculate new inactive counts manually
+        new_inactive_dict=all_owned_dict.copy() # Start with total counts
+        for name,count_to_subtract in new_active_dict.items():
+            # Subtract the active count from the total count
+            new_inactive_dict[name]=new_inactive_dict.get(name,0)-count_to_subtract
+
+        # Remove cards with zero or negative count from inactive dict
+        new_inactive_dict={name:count for name,count in new_inactive_dict.items() if count>0}
+
+
+        write_cards(active_path, new_active_dict)
+        write_cards(inactive_path, new_inactive_dict)
+
+        # Redirect after successful POST
+        return redirect('/inventory')
+
+    #Handle GET Request
+    return render_template(
+        'inventory.html',
+        uid=session['uid'],
+        all_cards_dict=all_owned_dict,
+        active_cards_dict=current_active_dict,
+        inactive_cards_dict=current_inactive_dict,
+        not_enough_cards=not_enough_cards,
+        validation_failed=validation_failed
+    )
+
+
+
+
 #WebSocket route for match communication (authentication, chat, actions).
 @sock.route("/chat/match/<match_id>")
 def chat(ws,match_id):
@@ -486,7 +628,7 @@ def chat(ws,match_id):
                 ability_name=f"ability{ability_number}"
                 ability_method=getattr(attacking_card,ability_name)
 
-                action_result=ability_method(attacking_player,targeted_player,targeted_card)
+                action_result=ability_method(attacking_player,targeted_player,targeted_card,targeted_card_index)
                 message_to_send=json.dumps(action_result)
 
                 #Broadcast action result to all connected clients.
