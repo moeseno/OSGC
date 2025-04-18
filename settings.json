@@ -1,0 +1,7 @@
+{
+  "SECRET_KEY": "dewu ioffcfduso",
+  "SERVER_NAME": "default",
+  "DEFAULT_USERNAME": "Unknown Player",
+  "DEFAULT_OPPONENT_NAME": "Unknown Opponent",
+  "USERNAME_CHAR_LIMIT": 16
+}

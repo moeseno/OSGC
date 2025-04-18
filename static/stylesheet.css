@@ -154,3 +154,33 @@
 .active{
 	opacity: 100%;
 }
+
+.default{
+	background-color: black;
+	color: white;
+	width: 100px;
+	height: 100px;
+	border-color: red;
+	border-width: 2px;
+	border-style: solid;
+}
+
+.none{
+	background-color: white;
+	color: black;
+	width: 100px;
+	height: 100px;
+	border-color: black;
+	border-width: 2px;
+	border-style: solid;
+}
+
+.default2{
+	background-color: blue;
+	color: white;
+	width: 100px;
+	height: 100px;
+	border-color: red;
+	border-width: 2px;
+	border-style: solid;
+}

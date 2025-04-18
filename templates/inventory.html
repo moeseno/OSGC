@@ -4,8 +4,13 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title></title>
+	<link rel="stylesheet" type="text/css" href="../static/stylesheet.css">
 </head>
 <body>
+
+<script type="text/javascript">
+	let lastClickedCardData=null;
+</script>
 
 
 inventory
@@ -15,16 +20,34 @@ inventory
 
 uid: {{uid}}
 <br>
-all cards list: {{all_cards_dict}}
+all cards list: {{all_owned_cards}}
 <br>
-active cards list: {{active_cards_dict}}
+active cards list: {{current_selected_cards}}
 <br>
-inactive cards list: {{inactive_cards_dict}}
+inactive cards list: {{current_non_selected_cards}}
 <br>
 not enough cards: {{not_enough_cards}}
 <br>
 validation failed: {{validation_failed}}
 
+<button onclick="clearSelection()"></button>
+<form action="/inventory" method="POST">
+	<div class="selected-cards"></div>
+</form>
+
+<hr>
+<div class="non-selected-cards"></div>
+
+
+<script type="text/javascript">
+	let uid="{{uid}}";
+	let allOwnedCards={{all_owned_cards|tojson}};
+	let currentSelectedCards={{current_selected_cards|tojson}};
+	let currentNonSelectedCards={{current_non_selected_cards|tojson}};
+	let notEnoughCards={{not_enough_cards|tojson}};
+	let validationFailed={{validation_failed|tojson}};
+</script>
+<script type="text/javascript" src="/static/inventory.js"></script>
 
 
 </body>
