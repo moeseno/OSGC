@@ -94,25 +94,15 @@ class Card():
 
 
 
-#Loads settings from settings.txt into the global 'settings' dictionary.
-#Expects format: type.key.value (e.g., str.SECRET_KEY.mysecret) per line.
+#Loads settings from settings.json into the global 'settings' dictionary.
 #Exits application if format is incorrect or file read fails.
 def init():
-    try:
-        with open("settings.txt") as o:
-            values=o.readlines()
-            for value in values:
-                split_value=value.split(".")
-                if len(split_value)!=3:
-                    sys.exit()
-                if "" in split_value:
-                    sys.exit()
-                if split_value[0]=="str":
-                    settings[split_value[1]]=str(split_value[2])
-                if split_value[0]=="int":
-                    settings[split_value[1]]=int(split_value[2])
+    try: 
+        settings_filepath="settings.json"
+        with open(settings_filepath,'r',encoding='utf-8') as file:
+            loaded_settings=json.load(file)
+            settings.update(loaded_settings)
     except Exception as e:
-        #Re-raise exception on file read or processing error.
         raise e
 
 init()
@@ -188,6 +178,17 @@ def login():
 
 
 
+#helpers for singup
+def init_inventory(folderpath,filepaths):
+    initial_cards={"Card":5}
+    sorted_card_names=sorted(initial_cards.keys())
+    os.makedirs(folderpath,exist_ok=True)
+    for filepath in filepaths:
+        with open(filepath,"w",encoding="utf-8")as file:
+            if "inactive_cards" in filepath:
+                json.dump(initial_cards,file,sort_keys=True,indent=None,separators=(',',':'))
+
+
 #GET displays signup form, POST handles signup attempt.
 @app.route("/signup",methods=["GET","POST"])
 def signup():
@@ -244,11 +245,18 @@ def signup():
                         writer=csv.DictWriter(file,fieldnames=fieldnames)
                         writer.writerow(user)
 
+                    #init inventory
+                    player_dir=f"inventories/{uid}"
+                    selected_cards_path=f"{player_dir}/active_cards.json"
+                    non_selected_cards_path=f"{player_dir}/inactive_cards.json"
+                    init_inventory(player_dir,[selected_cards_path,non_selected_cards_path])
+
                     #Redirect to login page after successful signup.
                     return redirect("/login")
 
             #Handle potential file/processing errors.
             except Exception as e:
+                print(e)
                 error=f"{e}"
 
     #Render signup page with feedback.
@@ -402,94 +410,73 @@ def check_for_match():
     #No active match found for the user.
     return jsonify({"matched":False})
 
+    
 
-
+#helpers for inventory
 def read_cards(filepath):
-    card_dict={}
-    if not os.path.exists(filepath):
-        with open(filepath,"w",encoding="utf-8") as file:
-            pass
-    with open(filepath,"r",encoding="utf-8") as file:
-        for line in file:
-            line=line.strip()
-            parts=line.split('.')
-            card_name=parts[0]
-            count=int(parts[1])
-            if count>0:
-                card_dict[card_name]=card_dict.get(card_name,0)+count
-    return card_dict
+    read_cards={}
+    if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
+        with open(filepath,'r',encoding='utf-8') as file:
+            read_cards=json.load(file)
+    return read_cards
 
-def write_cards(filepath, card_dict):
+def write_cards(filepath,cards_to_write):
     os.makedirs(os.path.dirname(filepath),exist_ok=True)
-    sorted_card_names=sorted(card_dict.keys())
+    data_to_write={name: count for name, count in cards_to_write.items() if count > 0}
     with open(filepath,'w',encoding='utf-8') as file:
-        for card_name in sorted_card_names:
-            count=card_dict[card_name]
-            if count>0:
-                f.write(f"{card_name}.{count}\n")
+        if "inactive"in filepath:
+            json.dump(data_to_write,file,sort_keys=True,indent=None,separators=(',',':'))
+        else:
+            json.dump(data_to_write,file,sort_keys=False,indent=None,separators=(',',':'))
+            
 
-
-@app.route('/inventory', methods=['GET', 'POST'])
+@app.route('/inventory', methods=['GET','POST'])
 def inventory():
     not_enough_cards=False
     validation_failed=False
 
     if "logged_in" not in session or not session["logged_in"]:
-        return redirect("/login")
+        return redirect("/")
 
     player_dir=f"inventories/{session['uid']}"
-    active_path=f"{player_dir}/active_cards"
-    inactive_path=f"{player_dir}/inactive_cards"
+    selected_cards_path=f"{player_dir}/active_cards.json"
+    non_selected_cards_path=f"{player_dir}/inactive_cards.json"
 
     if not os.path.isdir(player_dir):
-        os.makedirs(player_dir)
+       os.makedirs(player_dir)
 
-    current_active_dict=read_cards(active_path)
-    current_inactive_dict=read_cards(inactive_path)
+    current_selected_cards=read_cards(selected_cards_path)
+    current_non_selected_cards=read_cards(non_selected_cards_path)
 
-    all_owned_dict=current_inactive_dict.copy()
-    for name,count in current_active_dict.items():
-        all_owned_dict[name]=all_owned_dict.get(name,0)+count
-
+    all_owned_cards=current_non_selected_cards.copy()
+    for name,count in current_selected_cards.items():
+        all_owned_cards[name]=all_owned_cards.get(name,0)+count
 
     if request.method=='POST':
         slot1_card=request.form.get('slot1',"").strip()
         slot2_card=request.form.get('slot2',"").strip()
         slot3_card=request.form.get('slot3',"").strip()
 
-        potential_active_cards_list=[card for card in [slot1_card, slot2_card, slot3_card] if card]
+        potential_selected_cards=[card for card in [slot1_card, slot2_card, slot3_card] if card]
 
-        if len(potential_active_cards_list)!=3:
+        if len(potential_selected_cards)!=3:
             not_enough_cards=True
             return render_template(
-                'inventory.html', uid=session['uid'],
-                all_cards_dict=all_owned_dict,
-                active_cards_dict=current_active_dict,
-                inactive_cards_dict=current_inactive_dict,
+                'inventory.html',
+                uid=session['uid'],
+                all_owned_cards=all_owned_cards,
+                current_selected_cards=current_selected_cards,
+                current_non_selected_cards=current_non_selected_cards,
                 not_enough_cards=not_enough_cards,
                 validation_failed=validation_failed
             )
 
-        # Create an empty dictionary to store the counts of cards selected in the slots
         selected_cards={}
-        # Loop through each card name submitted from the slots (e.g., ['Blue', 'Red', 'Blue'])
-        for card in potential_active_cards_list:
-            # For the current card name ('card'):
-            # - Try to get its current count from 'selected_cards'.
-            # - If the card isn't in the dictionary yet (first time seeing it), use 0 as the starting count.
-            # - Add 1 to this count (either the existing one or 0).
-            # - Store the new count back into 'selected_cards' with the card name as the key.
+        for card in potential_selected_cards:
             selected_cards[card]=selected_cards.get(card,0)+1
-            # Example after loop: selected_cards might be {'Blue': 2, 'Red': 1}
 
-        # Now loop through the counts calculated for the selected cards
         for card_name, selected_count in selected_cards.items():
-            # Check if the number of times this card was selected ('selected_count')
-            # is greater than the number the player actually owns.
-            # - 'all_owned_dict.get(card_name, 0)' retrieves the count of this card from the player's total inventory.
-            # - It defaults to 0 if the player doesn't own any cards with this name, preventing errors.
-            if selected_count>all_owned_dict.get(card_name, 0):
-                # If the player selected more than they own, set the flag to indicate validation failed
+            if selected_count>all_owned_cards.get(card_name, 0):
                 validation_failed=True
                 break
 
@@ -497,42 +484,32 @@ def inventory():
              return render_template(
                 'inventory.html',
                 uid=session['uid'],
-                all_cards_dict=all_owned_dict,
-                active_cards_dict=current_active_dict,
-                inactive_cards_dict=current_inactive_dict,
+                all_owned_cards=all_owned_cards,
+                current_selected_cards=current_selected_cards,
+                current_non_selected_cards=current_non_selected_cards,
                 not_enough_cards=not_enough_cards,
                 validation_failed=validation_failed
              )
 
-        new_active_dict=selected_cards
+        new_selected_cards=selected_cards
+        new_non_selected_cards=all_owned_cards.copy()
+        for name,count_to_subtract in new_selected_cards.items():
+            new_non_selected_cards[name]=new_non_selected_cards.get(name,0)-count_to_subtract
+        new_non_selected_cards={name:count for name,count in new_non_selected_cards.items() if count>0}
 
-        # Calculate new inactive counts manually
-        new_inactive_dict=all_owned_dict.copy() # Start with total counts
-        for name,count_to_subtract in new_active_dict.items():
-            # Subtract the active count from the total count
-            new_inactive_dict[name]=new_inactive_dict.get(name,0)-count_to_subtract
-
-        # Remove cards with zero or negative count from inactive dict
-        new_inactive_dict={name:count for name,count in new_inactive_dict.items() if count>0}
+        write_cards(selected_cards_path, new_selected_cards)
+        write_cards(non_selected_cards_path, new_non_selected_cards)
 
 
-        write_cards(active_path, new_active_dict)
-        write_cards(inactive_path, new_inactive_dict)
-
-        # Redirect after successful POST
-        return redirect('/inventory')
-
-    #Handle GET Request
     return render_template(
         'inventory.html',
         uid=session['uid'],
-        all_cards_dict=all_owned_dict,
-        active_cards_dict=current_active_dict,
-        inactive_cards_dict=current_inactive_dict,
+        all_owned_cards=all_owned_cards,
+        current_selected_cards=current_selected_cards,
+        current_non_selected_cards=current_non_selected_cards,
         not_enough_cards=not_enough_cards,
         validation_failed=validation_failed
     )
-
 
 
 
