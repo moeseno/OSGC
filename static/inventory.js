@@ -1,238 +1,289 @@
-console.log(uid);
-console.log(allOwnedCards);
-console.log(currentSelectedCards);
-console.log(currentNonSelectedCards);
-console.log(notEnoughCards);
-console.log(validationFailed);
-
+// Defines card types, their display properties
 let cardFinder={
-	Card:{
-		className:"default",
-		cardName:"Card"
-	},
-	None:{
-		className:"none",
-		cardName:"None"
-	},
-	Card2:{
-		className:"default2",
-		cardName:"Card2"
-	}
+    Card:{className:"default",cardName:"Card"},
+    None:{className:"none",cardName:"None"},
+    Card2:{className:"default2",cardName:"Card2"}
 };
 
+
+// Renders the selection slots based on initial CARD COUNTS state
 function renderSelectedCards(){
-	let keys=Object.keys(currentSelectedCards);
-	if(keys.length===0){
-		currentSelectedCards={None:3};
-		keys=Object.keys(currentSelectedCards);
-	};
-	let fragment=document.createDocumentFragment();
-	let container=document.getElementsByClassName("selected-cards")[0]
-	//loop through all cards in selected cards
-	for(var cardKeyIndex=0;cardKeyIndex<keys.length;cardKeyIndex++){
-		let cardKey=keys[cardKeyIndex]
-		let cardAmount=currentSelectedCards[cardKey]
-		//create a div for each card owned
-		for(var cardAmountCounter=0;cardAmountCounter<cardAmount;cardAmountCounter++){
-			let newCard=document.createElement('div');
-			newCard.classList.add(cardFinder[cardKey].className);
-			newCard.innerHTML=cardFinder[cardKey]["cardName"];
-
-			newCard.setAttribute("onclick","moveCardToSelectedSlot(lastClickedCardData,this)")
-
-			fragment.appendChild(newCard)
-		};
-	};
-	container.appendChild(fragment);
-};
-
-
-
-function renderNonSelectedCards(){
-	let keys=Object.keys(currentNonSelectedCards);
-	if(keys.length===0){
-		currentNonSelectedCards={None:1};
-		keys=Object.keys(currentNonSelectedCards);
-	};
-	let container=document.getElementsByClassName("non-selected-cards")[0]
-	//loop through all cards in non selected cards
-	for(var cardKeyIndex=0;cardKeyIndex<keys.length;cardKeyIndex++){
-		//set card key and amount
-		let cardKey=keys[cardKeyIndex];
-		let cardAmount=currentNonSelectedCards[cardKey];
-		let cardName=cardFinder[cardKey].cardName;
-
-		//make divs
-		let newCard=document.createElement('div');
-		newCard.classList.add(cardFinder[cardKey].className);
-		let cardNameDiv=document.createElement("div");
-		cardNameDiv.innerHTML=cardName;
-		let cardAmountDiv=document.createElement("div");
-		cardAmountDiv.innerHTML=cardAmount;
-
-		cardAmountDiv.classList.add("card-amount-display");
-
-		//add data
-		newCard.setAttribute("data-amount",cardAmount);
-		newCard.setAttribute("data-name",cardFinder[cardKey].cardName);
-
-		//append divs
-		newCard.appendChild(cardNameDiv);
-		newCard.appendChild(cardAmountDiv);
-
-		newCard.setAttribute("onclick","trackLastClickedCard(this)");
-
-		container.appendChild(newCard);
-	};	
-};
-
-
-
-function setSlotNumbers(){
-	let cardSlotsContainer=document.getElementsByClassName("selected-cards")[0];
-	let cardSlots=cardSlotsContainer.children;
-
-	for (var i=0;i<cardSlots.length;i++){
-		cardSlots[i].setAttribute("name",`slot${i+1}`)
-	}
-};
-
-
-
-function trackLastClickedCard(clickedCard) {
-	let clickedCardClass=clickedCard.classList[0];
-    let clickedCardKey=null;
-    for(let key in cardFinder){
-        if(cardFinder[key].className===clickedCardClass){
-            clickedCardKey=key;
-            break;
-        }
+    // Assumes currentSelectedCards holds counts: {'Card': 2, 'None': 1}
+    if(typeof currentSelectedCards!=='object'||currentSelectedCards===null){
+        currentSelectedCards={None:3}; // Default if invalid
     }
 
-    //Does the card have any amount left in our data?
-    if (clickedCardKey&&currentNonSelectedCards[clickedCardKey]>0){
+    let selectedCardValues=Object.values(currentSelectedCards);
+
+    // Default to 3 'None' if initial object is empty
+    if(selectedCardValues.length===0){
+        currentSelectedCards={None:3};
+        selectedCardValues=Object.values(currentSelectedCards);
+    }
+    let fragment=document.createDocumentFragment();
+    let container=document.querySelector(".selected-cards"); // Use querySelector
+    if(!container)return;
+    container.innerHTML=''; // Clear previous content
+
+    // Loop through card types in the initial selected data
+    for(let i=0;i<selectedCardValues.length;i++){
+        let cardValue=selectedCardValues[i];
+        let cardDefinition=cardFinder[cardValue];
+
+
+        // Use None definition if card type is unknown
+        if(!cardDefinition){
+            cardValue='None';
+            cardDefinition=cardFinder[cardValue];
+            // If original key wasn't 'None', assume count was 1 for unknown card
+            if(selectedCardValues[i]!=='None') cardCount=1;
+        }
+        // Create an element for each instance of a card
+        let slotElement=document.createElement('div');
+        // Add class based on card type (will be updated by setSlotNumbers later)
+        slotElement.classList.add(cardDefinition.className);
+        slotElement.innerHTML=cardDefinition.cardName;
+        // Allow clicking the slot to move a selected card into it
+        slotElement.setAttribute("onclick","moveCardToSelectedSlot(lastClickedCardData,this)");
+        fragment.appendChild(slotElement);
+    }
+    container.appendChild(fragment);
+}
+
+
+// Renders the list of available cards (non-selected pool)
+function renderNonSelectedCards(){
+    // Assumes currentNonSelectedCards holds counts: {'Card': 5}
+    if(typeof currentNonSelectedCards!=='object'||currentNonSelectedCards===null){
+        currentNonSelectedCards={};
+    }
+    let nonSelectedCardKeys=Object.keys(currentNonSelectedCards);
+    let container=document.querySelector(".non-selected-cards");
+    if(!container)return;
+    container.innerHTML=''; // Clear previous content
+
+    for(let i=0;i<nonSelectedCardKeys.length;i++){
+        let cardKey=nonSelectedCardKeys[i];
+        let cardCount=currentNonSelectedCards[cardKey];
+        let cardDefinition=cardFinder[cardKey];
+        // Skip None, undefined, or zero-count cards in available list
+        if(cardKey==='None'||!cardDefinition||cardCount<=0){
+            continue;
+        }
+        let cardElement=document.createElement('div');
+        cardElement.classList.add(cardDefinition.className);
+        cardElement.classList.add('available-card-item');
+        let nameElement=document.createElement("div");
+        nameElement.innerHTML=cardDefinition.cardName;
+        let countElement=document.createElement("div");
+        countElement.innerHTML=cardCount;
+        countElement.classList.add("card-amount-display");
+        cardElement.setAttribute("data-amount",cardCount);
+        cardElement.setAttribute("data-key",cardKey);
+        cardElement.appendChild(nameElement);
+        cardElement.appendChild(countElement);
+        cardElement.setAttribute("onclick",`trackLastClickedCard('${cardKey}')`);
+        container.appendChild(cardElement);
+    }
+}
+
+
+// Adds slot-specific attributes and hidden inputs AFTER initial render
+function setSlotNumbers(){
+    let container=document.querySelector(".selected-cards");
+    if(!container) return;
+    let slotElements=container.children;
+    for(let i=0;i<slotElements.length;i++){
+        slotElements[i].classList.add("card-slot"); // Add base slot class
+        // Add hidden input for tracking state and submission
+        let hiddenInput=document.createElement("input");
+        hiddenInput.setAttribute("type","hidden");
+        hiddenInput.setAttribute("name",`slot${i+1}`); // Name based on position
+        // Determine initial value based on rendered card class (less reliable but matches original logic)
+        let currentClass=slotElements[i].classList[0] === 'card-slot' ? slotElements[i].classList[1] : slotElements[i].classList[0];
+        let initialValue='None';
+        for(let key in cardFinder){
+            if(cardFinder[key].className===currentClass){
+                initialValue=key;
+                break;
+            }
+        }
+        hiddenInput.setAttribute("value",initialValue);
+        // Avoid adding duplicate input if somehow called twice
+        if(!slotElements[i].querySelector('input[type="hidden"]')){
+            slotElements[i].appendChild(hiddenInput);
+        }
+    }
+}
+
+
+// Stores data of the last available card clicked (if count > 0)
+function trackLastClickedCard(clickedCardKey){
+    if(clickedCardKey&&cardFinder[clickedCardKey]&&currentNonSelectedCards[clickedCardKey]>0){
         lastClickedCardData={
             key:clickedCardKey,
             className:cardFinder[clickedCardKey].className,
             cardName:cardFinder[clickedCardKey].cardName
         };
+        document.querySelectorAll('.available-card-item.selected-for-move').forEach(el=>el.classList.remove('selected-for-move'));
+        const clickedEl=document.querySelector(`.non-selected-cards [data-key="${clickedCardKey}"]`);
+        if(clickedEl)clickedEl.classList.add('selected-for-move');
     }else{
         lastClickedCardData=null;
+         document.querySelectorAll('.available-card-item.selected-for-move').forEach(el=>el.classList.remove('selected-for-move'));
     }
-};
-
-
-
-function updateNonSelectedCardDisplay(cardKey) {
-    let cardData=cardFinder[cardKey];
-    // Don't try to update 'None' or unknown cards in the list
-    if (!cardData||cardKey==='None') {
-        return;
-    }
-
-    let cardElement=document.querySelector(`.non-selected-cards .${cardData.className}`);
-
-    let amountDisplay=cardElement.querySelector('.card-amount-display');
-    let currentAmount=currentNonSelectedCards[cardKey]||0;
-
-    if (amountDisplay) {
-        amountDisplay.innerHTML=currentAmount;
-    }
-    cardElement.setAttribute('data-amount',currentAmount);
-
 }
 
 
+// Updates the display count or adds/removes an available card element
+function updateNonSelectedCardDisplay(cardKeyToUpdate){
+    let cardDefinition=cardFinder[cardKeyToUpdate];
+    if(!cardDefinition||cardKeyToUpdate==='None')return;
+    const container=document.querySelector(".non-selected-cards");
+    if(!container)return;
+    const cardElement=container.querySelector(`[data-key="${cardKeyToUpdate}"]`);
+    const newCount=currentNonSelectedCards[cardKeyToUpdate]||0;
 
-function moveCardToSelectedSlot(cardData,slot){
-    //If no card was properly selected before clicking the slot, do nothing.
-    if(cardData===null||cardData.key===null){
-        // Need to find out what's currently in the slot
-        let slottedCardClass=slot.classList[0];
-        let slottedCardKey=null;
+    if(newCount<=0){
+        if(cardElement)cardElement.remove();
+    }else{
+        if(cardElement){
+            const countDisplay=cardElement.querySelector('.card-amount-display');
+            if(countDisplay)countDisplay.innerHTML=newCount;
+            cardElement.setAttribute('data-amount',newCount);
+        }else{
+            let newCardElement=document.createElement('div');
+            newCardElement.classList.add(cardDefinition.className);
+            newCardElement.classList.add('available-card-item');
+            let nameElement=document.createElement("div");
+            nameElement.innerHTML=cardDefinition.cardName;
+            let countElement=document.createElement("div");
+            countElement.innerHTML=newCount;
+            countElement.classList.add("card-amount-display");
+            newCardElement.setAttribute("data-amount",newCount);
+            newCardElement.setAttribute("data-key",cardKeyToUpdate);
+            newCardElement.appendChild(nameElement);
+            newCardElement.appendChild(countElement);
+            newCardElement.setAttribute("onclick",`trackLastClickedCard('${cardKeyToUpdate}')`);
+            container.appendChild(newCardElement);
+        }
+    }
+}
 
-        for (let key in cardFinder) {
-            if (cardFinder[key].className===slottedCardClass) {
-                slottedCardKey=key;
-                break;
+
+// Handles moving a card between the available pool and a selected slot
+function moveCardToSelectedSlot(clickedCardData,targetSlotElement){
+    if(!targetSlotElement)return;
+    let hiddenInput=targetSlotElement.querySelector('input[type="hidden"]');
+    // It's critical setSlotNumbers runs first to ensure hidden input exists
+    if(!hiddenInput){console.error("Missing hidden input in slot!"); return;}
+    let currentSlotCardKey=hiddenInput.value;
+    let slotName=hiddenInput.name;
+
+    // CASE 1: Return card FROM slot
+    if(clickedCardData===null||clickedCardData.key===null){
+        if(currentSlotCardKey==='None')return;
+        let returningCardDefinition=cardFinder[currentSlotCardKey];
+        if(returningCardDefinition){
+            if(!currentNonSelectedCards[currentSlotCardKey])currentNonSelectedCards[currentSlotCardKey]=0;
+            currentNonSelectedCards[currentSlotCardKey]++;
+            updateNonSelectedCardDisplay(currentSlotCardKey);
+        }
+        let noneDefinition=cardFinder['None'];
+        // Reset class list properly
+        targetSlotElement.className='card-slot '+noneDefinition.className;
+        targetSlotElement.innerHTML=noneDefinition.cardName;
+        targetSlotElement.appendChild(hiddenInput); // Re-append
+        hiddenInput.value='None';
+        return;
+    }
+
+    // CASE 2: Move card INTO slot
+    if(clickedCardData.key===currentSlotCardKey){
+        clearSelection();
+        return;
+    }
+    if(currentNonSelectedCards[clickedCardData.key]>0){
+        currentNonSelectedCards[clickedCardData.key]--;
+        updateNonSelectedCardDisplay(clickedCardData.key);
+        if(currentSlotCardKey!=='None'){
+            let currentSlotDefinition=cardFinder[currentSlotCardKey];
+            if(currentSlotDefinition){
+                 if(!currentNonSelectedCards[currentSlotCardKey])currentNonSelectedCards[currentSlotCardKey]=0;
+                 currentNonSelectedCards[currentSlotCardKey]++;
+                 updateNonSelectedCardDisplay(currentSlotCardKey);
             }
         }
-
-        if (slottedCardKey === null || slottedCardKey === 'None') {
-            return;
-        }
-
-        // Return the card to the pool
-        // Initialize count if needed
-        if (!currentNonSelectedCards[slottedCardKey]) {
-            currentNonSelectedCards[slottedCardKey] = 0;
-        }
-        currentNonSelectedCards[slottedCardKey]++;
-        updateNonSelectedCardDisplay(slottedCardKey);
-
-        let noneCardInfo=cardFinder['None'];
-        slot.className='';
-        slot.classList.add(noneCardInfo.className);
-        slot.innerHTML=noneCardInfo.cardName;
-
-        // Exit the function after handling unselect
-        return;
+        // Reset class list properly
+        targetSlotElement.className='card-slot '+clickedCardData.className;
+        targetSlotElement.innerHTML=clickedCardData.cardName;
+        targetSlotElement.appendChild(hiddenInput); // Re-append
+        hiddenInput.value=clickedCardData.key;
+        clearSelection();
+    }else{
+        clearSelection();
     }
-
-    //get slotted card data
-    let slottedCardClass=slot.classList[0];
-    let slottedCardKey=null;
-    let otherSlottedCardInfo=null;
-
-    // Find the key and details matching the slot's current class
-    for(let key in cardFinder){
-        if(cardFinder[key].className===slottedCardClass){
-            slottedCardKey=key;
-            //className and cardName
-            otherSlottedCardData=cardFinder[key];
-            break;
-        }
-    }
-
-    //if cant identify slotted card
-    if (slottedCardKey===null){
-         return;
-    }
-
-    // Create the object holding data for the card in the slot
-    let slottedCardData={
-        key:slottedCardKey,
-        className:otherSlottedCardData.className, 
-        cardName:otherSlottedCardData.cardName
-    };
-
-    currentNonSelectedCards[cardData.key]--;
-
-    updateNonSelectedCardDisplay(cardData.key);
-
-    if(slottedCardData.key!=='None'){
-        // Initialize count if it wasn't in the list before
-        if (!currentNonSelectedCards[slottedCardData.key]) {
-            currentNonSelectedCards[slottedCardData.key] = 0;
-        }
-        currentNonSelectedCards[slottedCardData.key]++;
-        updateNonSelectedCardDisplay(slottedCardData.key);
-    }
-
-    slot.className='';
-    slot.classList.add(cardData.className);
-    slot.innerHTML=cardData.cardName;
-
-    lastClickedCardData=null;
 }
 
 
+// Submits the current selection state to the server
+async function handleInventorySubmit(event){
+    event.preventDefault();
+    const selectedData={};
+    // Gather data from hidden inputs (state is tracked there now)
+    document.querySelectorAll('.selected-cards .card-slot').forEach(slot=>{
+        const hiddenInput=slot.querySelector('input[type="hidden"]');
+        if(hiddenInput&&hiddenInput.name)selectedData[hiddenInput.name]=hiddenInput.value;
+    });
+    const payload={
+        uid:(typeof uid!=='undefined'?uid:null),
+        selected_cards:selectedData, // Send slot assignments
+        current_non_selected_cards:currentNonSelectedCards, // Send current available counts
+        all_owned_cards:(typeof allOwnedCards!=='undefined'?allOwnedCards:null) // Send initial total counts
+    };
+    if(!payload.uid||!payload.all_owned_cards){alert("Error");return;}
 
+    let success=false;
+    try{
+        const response=await fetch('/inventory',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify(payload)
+        });
+        if(response.ok){
+            const result=await response.json();
+            success=result===true;
+        }else{
+             console.error('HTTP Error:',response.status);
+        }
+    }catch(error){
+        console.error('Network Error:',error);
+    }
+
+    if(success){alert("Selection Saved!");}
+    else{alert("Error saving selection.");}
+}
+
+
+// Clears the currently held card selection state
 function clearSelection(){
-	lastClickedCardData=null;
-};
+    lastClickedCardData=null;
+    document.querySelectorAll('.available-card-item.selected-for-move').forEach(el=>el.classList.remove('selected-for-move'));
+}
 
-renderSelectedCards();
-renderNonSelectedCards();
 
-setSlotNumbers();
+// --- Initialize Page ---
+document.addEventListener('DOMContentLoaded',()=>{
+    if(typeof currentSelectedCards==='undefined'||typeof currentNonSelectedCards==='undefined'){
+         console.error("Initial card data missing.");
+         return;
+    }
+    // Initial render based on counts
+    renderSelectedCards();
+    renderNonSelectedCards();
+    // Add hidden inputs and slot classes AFTER initial render
+    setSlotNumbers();
+
+    const form=document.querySelector('.inventory-form');
+    if(form)form.addEventListener('submit',handleInventorySubmit);
+});
