@@ -9,6 +9,7 @@ import random
 import math
 import os
 import csv
+import random
 
 settings={}
 waiting_room=[]
@@ -34,10 +35,10 @@ class Player():
 
 class Card():
     """Base object for game cards."""
-    def __init__(self,name,hp,speed):
-        self.name=name
-        self.hp=hp
-        self.speed=speed
+    def __init__(self):
+        self.name="Card"
+        self.hp=10
+        self.speed=10
 
     def death_check(self,target):
         if target.hp<=0:
@@ -91,6 +92,11 @@ class Card():
             "target_hp":target.hp,
             "death":death_status
         }
+
+
+card_finder={
+    "Card":Card
+}
 
 
 
@@ -316,8 +322,14 @@ def matchmaking():
         #Extract details for the first two players in the queue.
         uid1=list(waiting_room[0].keys())[0]
         username1=waiting_room[0][uid1]
+        with open(f"./inventories/{uid1}/active_cards.json","r") as file:
+            card_json1=json.load(file)
+        card_list1=[card_finder[card_json1[slot]]() for slot in card_json1]
         uid2=list(waiting_room[1].keys())[0]
         username2=waiting_room[1][uid2]
+        with open(f"./inventories/{uid2}/active_cards.json","r") as file:
+            card_json2=json.load(file)
+        card_list2=[card_finder[card_json2[slot]]() for slot in card_json2]
 
         #Randomly determine which player acts first.
         player_uids=[uid1,uid2]
@@ -326,8 +338,8 @@ def matchmaking():
         #Create the match state in the global dictionary.
         active_matches[match_id]={
             "players":{
-                uid1:Player(username=username1,uid=uid1,cards_list=[Card(name="card1",hp=10,speed=10),Card(name="card2",hp=10,speed=10),Card(name="card3",hp=10,speed=10)],client=None),
-                uid2:Player(username=username2,uid=uid2,cards_list=[Card(name="card4",hp=10,speed=10),Card(name="card5",hp=10,speed=10),Card(name="card6",hp=10,speed=10)],client=None)
+                uid1:Player(username=username1,uid=uid1,cards_list=card_list1,client=None),
+                uid2:Player(username=username2,uid=uid2,cards_list=card_list2,client=None)
             },
             "next_actioning_player_uid":next_actioning_player_uid
         }
@@ -414,11 +426,11 @@ def check_for_match():
 
 #helpers for inventory
 def read_cards(filepath):
-    read_cards={}
+    read_cards_data = {}
     if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
         with open(filepath,'r',encoding='utf-8') as file:
-            read_cards=json.load(file)
-    return read_cards
+            read_cards_data = json.load(file)
+    return read_cards_data
 
 def write_cards(filepath,cards_to_write):
     os.makedirs(os.path.dirname(filepath),exist_ok=True)
@@ -428,89 +440,146 @@ def write_cards(filepath,cards_to_write):
             json.dump(data_to_write,file,sort_keys=True,indent=None,separators=(',',':'))
         else:
             json.dump(data_to_write,file,sort_keys=False,indent=None,separators=(',',':'))
-            
+
 
 @app.route('/inventory', methods=['GET','POST'])
 def inventory():
-    not_enough_cards=False
-    validation_failed=False
-
-    if "logged_in" not in session or not session["logged_in"]:
-        return redirect("/")
-
+    if "logged_in" not in session or not session["logged_in"]: return redirect("/")
     player_dir=f"inventories/{session['uid']}"
     selected_cards_path=f"{player_dir}/active_cards.json"
     non_selected_cards_path=f"{player_dir}/inactive_cards.json"
+    if not os.path.isdir(player_dir): os.makedirs(player_dir)
 
-    if not os.path.isdir(player_dir):
-       os.makedirs(player_dir)
+    # Read current state from files
+    current_selected_slots=read_cards(selected_cards_path) # Renamed for clarity: file holds slots
+    current_inactive_cards=read_cards(non_selected_cards_path) # File holds inactive counts
 
-    current_selected_cards=read_cards(selected_cards_path)
-    current_non_selected_cards=read_cards(non_selected_cards_path)
-
-    all_owned_cards=current_non_selected_cards.copy()
-    for name,count in current_selected_cards.items():
-        all_owned_cards[name]=all_owned_cards.get(name,0)+count
+    # --- CORRECTED: Calculate total owned cards ---
+    all_owned_cards=current_inactive_cards.copy() # Start with inactive counts
+    # Iterate through the slots read from the active_cards file
+    for slot, card_key in current_selected_slots.items():
+        if card_key!='None': # If a slot has a card (not 'None')
+            # Increment the count for that card key in the total owned dictionary
+            all_owned_cards[card_key]=all_owned_cards.get(card_key,0)+1 # Add 1 (integer)
+    # --- End Correction ---
 
     if request.method=='POST':
-        slot1_card=request.form.get('slot1',"").strip()
-        slot2_card=request.form.get('slot2',"").strip()
-        slot3_card=request.form.get('slot3',"").strip()
-
-        potential_selected_cards=[card for card in [slot1_card, slot2_card, slot3_card] if card]
-
-        if len(potential_selected_cards)!=3:
-            not_enough_cards=True
-            return render_template(
-                'inventory.html',
-                uid=session['uid'],
-                all_owned_cards=all_owned_cards,
-                current_selected_cards=current_selected_cards,
-                current_non_selected_cards=current_non_selected_cards,
-                not_enough_cards=not_enough_cards,
-                validation_failed=validation_failed
-            )
+        # --- POST Logic (Assumed okay from previous steps) ---
+        data=request.get_json()
+        if not data: return jsonify(False),400
+        selected_slots_from_client=data.get('selected_cards')
+        if not selected_slots_from_client or not isinstance(selected_slots_from_client,dict): return jsonify(False),400
 
         selected_cards={}
-        for card in potential_selected_cards:
-            selected_cards[card]=selected_cards.get(card,0)+1
+        num_slots_filled=0
+        cleaned_selection_slots={}
+        for slot, card_key in selected_slots_from_client.items():
+             if not isinstance(card_key,str): return jsonify(False),400
+             card_key=card_key.strip()
+             cleaned_selection_slots[slot]=card_key
+             if card_key!='None':
+                 selected_cards[card_key]=selected_cards.get(card_key,0)+1
+                 num_slots_filled+=1
+
+        # if num_slots_filled!=3: return jsonify(False)
 
         for card_name, selected_count in selected_cards.items():
-            if selected_count>all_owned_cards.get(card_name, 0):
-                validation_failed=True
-                break
+            # Use the correctly calculated all_owned_cards for validation
+            if selected_count>all_owned_cards.get(card_name,0): return jsonify(False),400
 
-        if validation_failed:
-             return render_template(
-                'inventory.html',
-                uid=session['uid'],
-                all_owned_cards=all_owned_cards,
-                current_selected_cards=current_selected_cards,
-                current_non_selected_cards=current_non_selected_cards,
-                not_enough_cards=not_enough_cards,
-                validation_failed=validation_failed
-             )
+        new_selected_slots_to_save=cleaned_selection_slots
+        try:
+            with open(selected_cards_path,'w',encoding='utf-8') as f:
+                json.dump(new_selected_slots_to_save,f,indent=None,separators=(',',':'))
+        except Exception:
+            return jsonify(False),500
 
-        new_selected_cards=selected_cards
         new_non_selected_cards=all_owned_cards.copy()
-        for name,count_to_subtract in new_selected_cards.items():
+        for name,count_to_subtract in selected_cards.items():
             new_non_selected_cards[name]=new_non_selected_cards.get(name,0)-count_to_subtract
-        new_non_selected_cards={name:count for name,count in new_non_selected_cards.items() if count>0}
+        try:
+            write_cards(non_selected_cards_path,new_non_selected_cards)
+        except Exception:
+            return jsonify(False),500
 
-        write_cards(selected_cards_path, new_selected_cards)
-        write_cards(non_selected_cards_path, new_non_selected_cards)
+        return jsonify(True)
 
+    else: # GET Request
+        non_selected_for_display=all_owned_cards.copy()
+        # Subtract cards currently in slots (use the data read earlier)
+        for slot, card_key in current_selected_slots.items():
+            if card_key!='None' and card_key in non_selected_for_display:
+                 if non_selected_for_display[card_key]>0:
+                     non_selected_for_display[card_key]-=1
+        # Filter out zero counts for display
+        non_selected_for_display={k:v for k,v in non_selected_for_display.items() if v>0}
+
+        # Ensure default slots if file is empty/new user
+        if not current_selected_slots:
+             current_selected_slots={'slot1':'None','slot2':'None','slot3':'None'}
+
+        # Pass the correct data structures to the template
+        return render_template(
+            'inventory.html',
+            uid=session['uid'],
+            all_owned_cards=all_owned_cards, # Correctly calculated total
+            current_selected_cards=current_selected_slots, # Slot assignments for JS renderSelectedCards (if it expects slots)
+            current_non_selected_cards=non_selected_for_display # Calculated available counts for JS renderNonSelectedCards
+        )
+
+def pull():
+    return random.choice(list(card_finder.keys()))
+
+@app.route("/gacha",methods=["GET","POST"])
+def gacha():
+    if "logged_in" not in session or not session["logged_in"]: return redirect("/")
+
+    player_dir=f"inventories/{session["uid"]}"
+    non_selected_cards_path=f"{player_dir}/inactive_cards.json"
+
+    if request.method=="POST":
+        data=request.get_json()
+        if not data:return jsonify(False),400
+        amount=data.get("amount")
+
+        print(data)
+        print(amount)
+        print(type(amount))
+
+        if amount!=1 and amount!=10:
+            return jsonify(False),400
+
+        pulled_cards={}
+        print(amount)
+        for x in range(amount):
+            pulled_card=pull()
+            if pulled_card in pulled_cards.keys():
+                pulled_cards[pulled_card]+=1
+            else:
+                pulled_cards[pulled_card]=1
+
+        print(pulled_cards)
+
+        with open(non_selected_cards_path,"r")as file:
+            owned_non_selected_cards=json.load(file)
+            print(owned_non_selected_cards)
+
+        for card in pulled_cards:
+            if card in owned_non_selected_cards.keys():
+                owned_non_selected_cards[card]+=pulled_cards[card]
+            else:
+                owned_non_selected_cards[card]=pulled_cards[card]
+
+            print(owned_non_selected_cards)
+        
+        with open(non_selected_cards_path,"w")as file:
+            json.dump(owned_non_selected_cards,file,sort_keys=True,indent=None,separators=(',',':'))
+
+        return jsonify(True)
 
     return render_template(
-        'inventory.html',
-        uid=session['uid'],
-        all_owned_cards=all_owned_cards,
-        current_selected_cards=current_selected_cards,
-        current_non_selected_cards=current_non_selected_cards,
-        not_enough_cards=not_enough_cards,
-        validation_failed=validation_failed
-    )
-
+        "gacha.html"
+        )
 
 
 #WebSocket route for match communication (authentication, chat, actions).

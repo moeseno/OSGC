@@ -31,10 +31,10 @@ not enough cards: {{not_enough_cards}}
 validation failed: {{validation_failed}}
 
 <button onclick="clearSelection()"></button>
-<form action="/inventory" method="POST">
+<form class="inventory-form">
 	<div class="selected-cards"></div>
+	<button type="submit">Save Selection</button>
 </form>
-
 <hr>
 <div class="non-selected-cards"></div>
 
@@ -44,11 +44,8 @@ validation failed: {{validation_failed}}
 	let allOwnedCards={{all_owned_cards|tojson}};
 	let currentSelectedCards={{current_selected_cards|tojson}};
 	let currentNonSelectedCards={{current_non_selected_cards|tojson}};
-	let notEnoughCards={{not_enough_cards|tojson}};
-	let validationFailed={{validation_failed|tojson}};
 </script>
 <script type="text/javascript" src="/static/inventory.js"></script>
-
 
 </body>
 </html>
