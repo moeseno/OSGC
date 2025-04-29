@@ -1,8 +1,28 @@
+//Sets the width of a single card based on its height to maintain aspect ratio.
+function setCardAspectRatio(card){
+    let height=card.offsetHeight;
+    let width=0.714*height;
+    card.style.width=width+"px";
+}
+
 // Defines card types, their display properties
 let cardFinder={
     Card:{className:"default",cardName:"Card"},
     None:{className:"none",cardName:"None"},
-    Card2:{className:"default2",cardName:"Card2"}
+    Card2:{className:"default2",cardName:"Card2"},
+    Card3:{className:"default3",cardName:"Card3"},
+    Card4:{className:"default4",cardName:"Card4"},
+    Card5:{className:"default5",cardName:"Card5"},
+    Card6:{className:"default6",cardName:"Card6"},
+    Card7:{className:"default7",cardName:"Card7"},
+    Card8:{className:"default8",cardName:"Card8"},
+    Card9:{className:"default9",cardName:"Card9"},
+    Cardq:{className:"defaultq",cardName:"Cardq"},
+    Cardw:{className:"defaultw",cardName:"Cardw"},
+    Carde:{className:"defaulte",cardName:"Carde"},
+    Cardr:{className:"defaultr",cardName:"Cardr"},
+    Cardt:{className:"defaultt",cardName:"Cardt"},
+    Cardy:{className:"defaulty",cardName:"Cardy"},
 };
 
 
@@ -63,6 +83,7 @@ function renderNonSelectedCards(){
     container.innerHTML=''; // Clear previous content
 
     for(let i=0;i<nonSelectedCardKeys.length;i++){
+        console.log(1)
         let cardKey=nonSelectedCardKeys[i];
         let cardCount=currentNonSelectedCards[cardKey];
         let cardDefinition=cardFinder[cardKey];
@@ -126,8 +147,8 @@ function trackLastClickedCard(clickedCardKey){
             cardName:cardFinder[clickedCardKey].cardName
         };
         document.querySelectorAll('.available-card-item.selected-for-move').forEach(el=>el.classList.remove('selected-for-move'));
-        const clickedEl=document.querySelector(`.non-selected-cards [data-key="${clickedCardKey}"]`);
-        if(clickedEl)clickedEl.classList.add('selected-for-move');
+        let clickedElement=document.querySelector(`.non-selected-cards [data-key="${clickedCardKey}"]`);
+        if(clickedElement)clickedElement.classList.add('selected-for-move');
     }else{
         lastClickedCardData=null;
          document.querySelectorAll('.available-card-item.selected-for-move').forEach(el=>el.classList.remove('selected-for-move'));
@@ -138,17 +159,17 @@ function trackLastClickedCard(clickedCardKey){
 // Updates the display count or adds/removes an available card element
 function updateNonSelectedCardDisplay(cardKeyToUpdate){
     let cardDefinition=cardFinder[cardKeyToUpdate];
-    if(!cardDefinition||cardKeyToUpdate==='None')return;
-    const container=document.querySelector(".non-selected-cards");
+    if(!cardDefinition||cardKeyToUpdate==='None'){return};
+    let container=document.querySelector(".non-selected-cards");
     if(!container)return;
-    const cardElement=container.querySelector(`[data-key="${cardKeyToUpdate}"]`);
-    const newCount=currentNonSelectedCards[cardKeyToUpdate]||0;
+    let cardElement=container.querySelector(`[data-key="${cardKeyToUpdate}"]`);
+    let newCount=currentNonSelectedCards[cardKeyToUpdate]||0;
 
     if(newCount<=0){
         if(cardElement)cardElement.remove();
     }else{
         if(cardElement){
-            const countDisplay=cardElement.querySelector('.card-amount-display');
+            let countDisplay=cardElement.querySelector('.card-amount-display');
             if(countDisplay)countDisplay.innerHTML=newCount;
             cardElement.setAttribute('data-amount',newCount);
         }else{
@@ -229,13 +250,13 @@ function moveCardToSelectedSlot(clickedCardData,targetSlotElement){
 // Submits the current selection state to the server
 async function handleInventorySubmit(event){
     event.preventDefault();
-    const selectedData={};
+    let selectedData={};
     // Gather data from hidden inputs (state is tracked there now)
     document.querySelectorAll('.selected-cards .card-slot').forEach(slot=>{
-        const hiddenInput=slot.querySelector('input[type="hidden"]');
+        let hiddenInput=slot.querySelector('input[type="hidden"]');
         if(hiddenInput&&hiddenInput.name)selectedData[hiddenInput.name]=hiddenInput.value;
     });
-    const payload={
+    let payload={
         uid:(typeof uid!=='undefined'?uid:null),
         selected_cards:selectedData, // Send slot assignments
         current_non_selected_cards:currentNonSelectedCards, // Send current available counts
@@ -245,13 +266,13 @@ async function handleInventorySubmit(event){
 
     let success=false;
     try{
-        const response=await fetch('/inventory',{
+        let response=await fetch('/inventory',{
             method:'POST',
             headers:{'Content-Type':'application/json'},
             body:JSON.stringify(payload)
         });
         if(response.ok){
-            const result=await response.json();
+            let result=await response.json();
             success=result===true;
         }else{
              console.error('HTTP Error:',response.status);
@@ -265,14 +286,6 @@ async function handleInventorySubmit(event){
 }
 
 
-// Clears the currently held card selection state
-function clearSelection(){
-    lastClickedCardData=null;
-    document.querySelectorAll('.available-card-item.selected-for-move').forEach(el=>el.classList.remove('selected-for-move'));
-}
-
-
-// --- Initialize Page ---
 document.addEventListener('DOMContentLoaded',()=>{
     if(typeof currentSelectedCards==='undefined'||typeof currentNonSelectedCards==='undefined'){
          console.error("Initial card data missing.");
@@ -283,7 +296,14 @@ document.addEventListener('DOMContentLoaded',()=>{
     renderNonSelectedCards();
     // Add hidden inputs and slot classes AFTER initial render
     setSlotNumbers();
+    document.querySelectorAll(".card-slot").forEach(setCardAspectRatio);
+    document.querySelectorAll(".available-card-item").forEach(setCardAspectRatio);
 
-    const form=document.querySelector('.inventory-form');
+    let form=document.querySelector('.inventory-form');
     if(form)form.addEventListener('submit',handleInventorySubmit);
+});
+
+window.addEventListener("resize",()=>{
+    document.querySelectorAll(".card-slot").forEach(setCardAspectRatio);
+    document.querySelectorAll(".available-card-item").forEach(setCardAspectRatio);
 });

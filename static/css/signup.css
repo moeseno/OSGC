@@ -1,0 +1,53 @@
+.main-container{
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	font-family: "Courier New",Courier,monospace;
+	font-weight: 900;
+}
+
+.title{
+	color: white;
+	font-size: 7.5vmin;
+	margin-bottom: 2.5vmin;
+}
+
+.form{
+	display: flex;
+	flex-direction: column;
+	align-items: start;
+	justify-content: space-between;
+}
+
+.subtitle{
+	color: white;
+	font-size: 2.5vmin;
+}
+
+.input-field{
+	margin-bottom: 1.5vmin;
+	margin-top: 0.5vmin;
+	border: none;
+	border-radius: 5px;
+	background: dimgray;
+	color: white;
+	font-family: "Courier New",Courier,monospace;
+	font-weight: 900;
+	height: 2vmin;
+	width: 25vmin;
+}
+
+.submit{
+	border-color: cyan;
+	border-radius: 5px;
+	border-width: 2px;
+	background: dimgray;
+	border-style: solid;
+	color: white;
+	font-family: "Courier New",Courier,monospace;
+	font-weight: 900;
+	height: 3vmin;
+	width: 10vmin;
+}

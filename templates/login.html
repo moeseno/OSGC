@@ -3,44 +3,28 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" type="text/css" href="../static/css/login.css">
+	<link rel="stylesheet" type="text/css" href="../static/css/main.css">
 	<title></title>
 </head>
 <body>
 
-<h1>login</h1>
-<br>
-<!-- login form -->
-<form method="POST" action="/login">
-	username:
-	<br>
-	<input type="text" name="username" placeholder="username">
-	<br>
-	password:
-	<br>
-	<input type="password" name="password" placeholder="password">
-	<br>
-	<input type="submit" name="log in">
-</form>
-<br>
+<div class="main-container">
+	<div class="title">Log in</div>
+	<form method="POST" action="/login" class="form">
+		<label class="subtitle">Username</label>
+		<input type="text" name="username" placeholder="Username" class="input-field">
+		<label class="subtitle">Password</label>
+		<input type="password" name="password" placeholder="Password" class="input-field">
+		<input type="submit" name="Log in" class="submit">
+	</form>
+</div>
 
-<!-- displays missing value if @ least 1 box is empty -->
-{%if missing_value%}
-<h2>missing value</h2>
-{%endif%}
 
-<!-- displays wrong password if passowrd is wrong -->
-{%if wrong_password%}
-<h2>wrong password</h2>
-{%endif%}
-
-<!-- displays user doesnt exist of user does not exist -->
-{%if nonexistent_user%}
-<h2>user does not exist</h2>
-{%endif%}
-
-<!-- displays error -->
 {%if error%}
-<h2>{{error}}</h2>
+{%for e in error.values()%}
+<p>{{e}}</p>
+{%endfor%}
 {%endif%}
 </body>
 </html>
