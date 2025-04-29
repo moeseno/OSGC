@@ -4,7 +4,9 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title></title>
-	<link rel="stylesheet" type="text/css" href="../static/stylesheet.css">
+	<link rel="stylesheet" type="text/css" href="../static/css/inventory.css">
+	<link rel="stylesheet" type="text/css" href="../static/css/main.css">
+	<link rel="stylesheet" type="text/css" href="../static/css/cards.css">
 </head>
 <body>
 
@@ -12,31 +14,14 @@
 	let lastClickedCardData=null;
 </script>
 
-
-inventory
-
-<br>
-<br>
-
-uid: {{uid}}
-<br>
-all cards list: {{all_owned_cards}}
-<br>
-active cards list: {{current_selected_cards}}
-<br>
-inactive cards list: {{current_non_selected_cards}}
-<br>
-not enough cards: {{not_enough_cards}}
-<br>
-validation failed: {{validation_failed}}
-
-<button onclick="clearSelection()"></button>
-<form class="inventory-form">
-	<div class="selected-cards"></div>
-	<button type="submit">Save Selection</button>
-</form>
-<hr>
-<div class="non-selected-cards"></div>
+<div class="main-container">
+	<form class="inventory-form">
+		<div class="selected-cards"></div>
+		<button type="submit" class="save-selection">Save Selection</button>
+	</form>
+	<hr>
+	<div class="non-selected-cards"></div>
+</div>
 
 
 <script type="text/javascript">

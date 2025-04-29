@@ -1,0 +1,39 @@
+.selected-cards{
+	display: flex;
+	flex-direction: row;
+	gap: 1vw;
+}
+
+.save-selection{
+	height: 5vmin;
+	width: 15vmin;
+	background: dimgray;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 10px;
+	text-decoration: none;
+	color: white;
+	font-size: 2vmin;
+	border: none;
+	margin-left: 1vw;
+	font-family: "Courier New",Courier,monospace;
+	font-weight: 900;
+}
+
+.inventory-form{
+	display: flex;
+	align-items: center;
+}
+
+.card-slot,.available-card-item{
+	text-align: start;
+	height: 15vh;
+}
+
+.non-selected-cards{
+	display: flex;
+	flex-direction: row;
+	gap: 1vw;
+	flex-wrap: wrap;
+}

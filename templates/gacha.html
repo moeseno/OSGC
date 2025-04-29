@@ -3,13 +3,23 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<link rel="stylesheet" type="text/css" href="../static/stylesheet.css">
+	<link rel="stylesheet" type="text/css" href="../static/css/gacha.css">
+	<link rel="stylesheet" type="text/css" href="../static/css/main.css">
+	<link rel="stylesheet" type="text/css" href="../static/css/cards.css">
 	<title></title>
 </head>
 <body>
 
-<button onclick="pull(1)">1 pull</button>
-<button onclick="pull(10)">10 pull</button>
+<div class="main-container">
+
+	<div class="pulled-cards-container"></div>
+	
+	<div class="pull-button-container">
+		<button onclick="pull(1)" class="pull-button">1 pull</button>
+		<button onclick="pull(10)" class="pull-button">10 pull</button>
+	</div>
+
+</div>
 
 <script type="text/javascript" src="/static/gacha.js"></script>
 

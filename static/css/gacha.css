@@ -1,0 +1,34 @@
+.pull-button{
+	height: 5vmin;
+	width: 15vmin;
+	background: dimgray;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 10px;
+	text-decoration: none;
+	color: white;
+	font-size: 2vmin;
+	border: none;
+	margin-left: 1vw;
+	font-family: "Courier New",Courier,monospace;
+	font-weight: 900;
+}
+
+.pull-button-container{
+	margin-top: 3vh;
+	display: flex;
+	gap: 1.5vw;
+}
+
+.pulled-cards-container{
+	gap: 1.5vw;
+	justify-content: space-between;
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+}
+
+.card{
+	height: 15vh;
+}

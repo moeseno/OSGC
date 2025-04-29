@@ -3,17 +3,33 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" type="text/css" href="../static/css/index.css">
+	<link rel="stylesheet" type="text/css" href="../static/css/main.css">
 	<title></title>
 </head>
 <body>
 
-<a href="/signup">signup</a>
-<a href="/login">login</a>
-<a href="/login_test">login_test</a>
-<a href="/logout">logout</a> 
-<a href="/matchmaking">matchmaking</a>
-<a href="/inventory">inventory</a>
-<a href="/gacha">gacha</a>
+<div class="main-container">
+
+	<div class="title">OPEN SOURCE GACHA CARDS</div>
+
+	<div class="button-container">
+		{%if not logged_in%}
+		<a href="/signup" class="button" style="border-color:cyan;border-width:2px;border-style:solid">Sign up</a>
+		<a href="/login" class="button" style="border-color:yellow;border-width:2px;border-style:solid">Log in</a>
+		{%endif%}
+
+		<a href="/login_test" class="button">login_test</a>
+
+		{%if logged_in%}
+		<a href="/matchmaking" class="button">matchmaking</a>
+		<a href="/inventory" class="button">inventory</a>
+		<a href="/gacha" class="button">gacha</a>
+		<a href="/logout" class="button">logout</a> 
+		{%endif%}
+	</div>
+
+</div>
 
 </body>
 </html>
