@@ -1,3 +1,41 @@
+//Object mapping card names to their CSS class and display name.
+let cardFinder={
+    Card:{className:"default",cardName:"Card"},
+    None:{className:"none",cardName:"None"},
+    Card2:{className:"default2",cardName:"Card2"},
+    Card3:{className:"default3",cardName:"Card3"},
+    Card4:{className:"default4",cardName:"Card4"},
+    Card5:{className:"default5",cardName:"Card5"},
+    Card6:{className:"default6",cardName:"Card6"},
+    Card7:{className:"default7",cardName:"Card7"},
+    Card8:{className:"default8",cardName:"Card8"},
+    Card9:{className:"default9",cardName:"Card9"},
+    Cardq:{className:"defaultq",cardName:"Cardq"},
+    Cardw:{className:"defaultw",cardName:"Cardw"},
+    Carde:{className:"defaulte",cardName:"Carde"},
+    Cardr:{className:"defaultr",cardName:"Cardr"},
+    Cardt:{className:"defaultt",cardName:"Cardt"},
+    Cardy:{className:"defaulty",cardName:"Cardy"},
+};
+
+//Applies CSS classes to card elements based on their data-name attribute.
+function applyCardCSS() {
+    let cards=document.getElementsByClassName("card");
+
+    for (let i=0;i<cards.length;i++) {
+        let card=cards[i];
+        let cardName=card.getAttribute("data-name");
+
+        if (cardName && cardFinder[cardName]) {
+            let cardInfo=cardFinder[cardName];
+
+            card.classList.add(cardInfo.className);
+        }
+    }
+}
+
+
+
 //Run only once at match start to make opponent cards initially clickable.
 function setInitialCardsAsTargetable(){
 	let opponentCards=document.getElementsByClassName("opponent-card");
@@ -78,17 +116,17 @@ function addMessage(text){
 }
 
 
-
+//Removes 'targeted' ID from opponent cards and resets targetedCardIndex.
 function clearTargets(){
 	let opponentCards=document.getElementsByClassName("opponent-card");
 	for(var i=opponentCards.length-1;i>=0;i--){
-		opponentCards[i].classList.remove("targeted");
+		opponentCards[i].id="";
 	}
 	targetedCardIndex=null;
 }
 
 
-
+//Removes 'active' class from player cards and resets activeCardIndex.
 function clearPlayerActiveCards(){
 	let playerCards=document.getElementsByClassName("player-card");
 	for(var i=playerCards.length-1;i>=0;i--){
@@ -98,7 +136,7 @@ function clearPlayerActiveCards(){
 }
 
 
-
+//Removes 'active' class from opponent cards.
 function clearOpponentActiveCards(){
 	let opponentCards=document.getElementsByClassName("opponent-card");
 	for(var i=opponentCards.length-1;i>=0;i--){
@@ -113,7 +151,7 @@ function setTarget(clickedCard,targetNumber){
 	//Only allow targeting if it is this player's turn.
 	if(nextActioningPlayerUid===uid){
 		clearTargets();
-		clickedCard.classList.add("targeted");
+		clickedCard.id="targeted";
 		//Store the index of the currently targeted card globally.
 	    targetedCardIndex=targetNumber;
 	}
@@ -267,7 +305,8 @@ function death(cardElement,cardOwnerUid){
 //Updates the visual turn indicator based on whose turn it is.
 function displayTurn(nextActioningPlayerUid){
 	turnDisplay=document.getElementsByClassName("turn-display")[0];
-	clearTargets(); //Ensure no targets linger between turns.
+	//Ensure no targets linger between turns.
+	clearTargets();
 
 	//Set indicator color: green for player's turn, red for opponent's.
 	if(nextActioningPlayerUid===uid){
@@ -341,8 +380,14 @@ socket.addEventListener("message",(event)=>{
 
         	//Process turn updates.
         	}else if(receivedMessage["type"]==="turn"){
-                nextActioningPlayerUid=receivedMessage["next_actioning_player_uid"];
-                displayTurn(nextActioningPlayerUid);
+        		if(receivedMessage["losing_player"]===null){
+        			nextActioningPlayerUid=receivedMessage["next_actioning_player_uid"];
+                	displayTurn(nextActioningPlayerUid);
+        		}else{
+        			losingPlayer=receivedMessage["losing_player"];
+        			setTimeout(redirect,1000);
+        			alert(`${losingPlayer} has lost! Returning to home page after clicking ok on this alert`)
+        		};
 
             }else if(receivedMessage["type"]==="swap"){
             	displaySwap(receivedMessage);
@@ -356,10 +401,12 @@ socket.addEventListener("message",(event)=>{
 
 //Global variable to store the index of the player's selected target card.
 let targetedCardIndex=null;
+//Global variable to store the index of the player's active card.
 let activeCardIndex=null;
 
 //Initial setup on page load.
 setCardsAspectRatio();
 displayTurn(nextActioningPlayerUid);
+applyCardCSS();
 //Recalculate card aspect ratios when the browser window is resized.
 window.addEventListener("resize",setCardsAspectRatio);

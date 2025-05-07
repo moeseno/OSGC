@@ -1,7 +1,9 @@
+//Redirects the browser to the homepage.
 function redirect(){
 	window.location.href="/";
 }
 
+//Periodically checks with the server if a match has been found for the player.
 function checkForMatch(){
 	//sends request to check if matched
 	fetch("/check_for_match")
@@ -20,4 +22,5 @@ function checkForMatch(){
 		});
 };
 
+//Initiates the matchmaking check process.
 checkForMatch();

@@ -23,8 +23,9 @@
 
 <div class="top-half">
     <div class="card-container">
+        {%set card_names=[]%}
         {% for card in opponent_cards %}
-        <div class="card opponent-card" onclick="setTarget(this,{{loop.index0}})"> 
+        <div class="card opponent-card" onclick="setTarget(this,{{loop.index0}})" data-name="{{card.name}}"> 
             {{card.name}}
             <div class="hp">
             	{{card.hp}}
@@ -39,7 +40,7 @@
 <div class="bottom-half">
 	<div class="card-container">
 		{% for card in cards %}
-        <div class="card player-card">
+        <div class="card player-card" data-name="{{card.name}}">
             {{card.name}}
             <div class="hp">
             	{{card.hp}}
