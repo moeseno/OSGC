@@ -95,18 +95,18 @@
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	background-color: red;
+	background-color: black;
 }
 
 .card-container{
 	display: flex;
 	justify-content: space-between;
-  	align-items: center;
-  	height: 60%;
-  	width: 40%;
-  	min-width: 300px;
-  	min-height: 100px;
-  	background-color: purple;
+	align-items: center;
+	height: 60%;
+	width: 40%;
+	min-width: 300px;
+	min-height: 100px;
+	background-color: black;
 }	
 
 .card{
@@ -122,7 +122,7 @@
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	background-color: blue;
+	background-color: black;
 }
 
 .ability{
@@ -135,8 +135,8 @@
 	border-style: solid;
 }
 
-.targeted{
-    background-color: yellow;
+#targeted{
+    border-color: yellow;
 }
 
 .defeated{

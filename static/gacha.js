@@ -1,3 +1,4 @@
+//Object mapping card names to their CSS class and display name.
 let cardFinder={
     Card:{className:"default",cardName:"Card"},
     None:{className:"none",cardName:"None"},
@@ -17,10 +18,11 @@ let cardFinder={
     Cardy:{className:"defaulty",cardName:"Cardy"},
 };
 
+//Sends a request to the server to pull cards and displays the results.
 async function pull(amount){
     let pulledCardsContainer=document.getElementsByClassName("pulled-cards-container")[0];
     pulledCardsContainer.innerHTML="";
-	const payload={
+    const payload={
         amount:amount
     };
     const response=await fetch('/gacha',{
@@ -34,10 +36,11 @@ async function pull(amount){
     if (response.ok) {
         displayPulledCards(pulledCards,amount);
     }else{
-    	alert(`error occured or sth`);
+        alert(`error occured or sth`);
     };
 };
 
+//Creates and displays card elements in the UI for each pulled card.
 function displayPulledCards(pulledCards,amount){
     let pulledCardsContainer=document.getElementsByClassName("pulled-cards-container")[0];
     for(let key in pulledCards){
@@ -58,6 +61,7 @@ function displayPulledCards(pulledCards,amount){
     100);
 }
 
+//Sets the width of a single card based on its height to maintain aspect ratio.
 function setCardAspectRatio(card){
     console.log(card)
     let height=card.offsetHeight;
@@ -65,6 +69,7 @@ function setCardAspectRatio(card){
     card.style.width=width+"px";
 }
 
+//Recalculates aspect ratio for all displayed pulled cards on window resize.
 window.addEventListener("resize",()=>{
     let pulledCards=document.getElementsByClassName("card");
     for (var i=pulledCards.length-1;i>=0;i--){

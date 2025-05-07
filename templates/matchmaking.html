@@ -3,14 +3,20 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" type="text/css" href="../static/css/main.css">
 	<title></title>
 </head>
 <body>
-{%if error%}
-{{error}}
-{%else%}
-matchmaking
-{%endif%}
+
+<div class="main-container">
+	<div class="title">
+		{%if error%}
+		{{error}}
+		{%else%}
+		matchmaking
+		{%endif%}
+	</div>
+</div>
 
 <script type="text/javascript" src="/static/check_for_match.js"></script>
 

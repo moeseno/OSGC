@@ -10,9 +10,13 @@ import math
 import os
 import csv
 import random
+import cards
 
+#Stores application settings.
 settings={}
+#Queue for players waiting for a match.
 waiting_room=[]
+#Dictionary of active matches.
 active_matches={}
 
 class Player():
@@ -29,198 +33,19 @@ class Player():
         self.uid=uid
         self.cards_list=cards_list
         self.client=client
+        #Index of the player's currently active card.
         self.active_card_index=None
 
 
-
-class Card():
-    """Base object for game cards."""
-    def __init__(self):
-        self.name="Card"
-        self.hp=10
-        self.speed=10
-
-    def death_check(self,target):
-        if target.hp<=0:
-            target.hp=0
-            return True
-        return False
-
-    def damage_calc(self,opponent,target_index,damage_number):
-        if opponent.active_card_index==target_index:
-            return damage_number
-        elif opponent.active_card_index==None:
-            return 0
-        else:
-            return math.floor(damage_number/2)
-
-    def ability1(self,caster,opponent,target,target_index):
-        target.hp-=self.damage_calc(opponent,target_index,1)
-        death_status=self.death_check(target)
-        return {
-            "type":"action",
-            "attacking_player_uid":caster.uid,
-            "targeted_player_uid":opponent.uid,
-            "attacking_card_index":caster.cards_list.index(self),
-            "targeted_card_index":opponent.cards_list.index(target),
-            "target_hp":target.hp,
-            "death":death_status
-        }
-
-    def ability2(self,caster,opponent,target,target_index):
-        target.hp-=self.damage_calc(opponent,target_index,2)
-        death_status=self.death_check(target)
-        return {
-            "type":"action",
-            "attacking_player_uid":caster.uid,
-            "targeted_player_uid":opponent.uid,
-            "attacking_card_index":caster.cards_list.index(self),
-            "targeted_card_index":opponent.cards_list.index(target),
-            "target_hp":target.hp,
-            "death":death_status
-        }
-
-    def ability3(self,caster,opponent,target,target_index):
-        target.hp-=self.damage_calc(opponent,target_index,3)
-        death_status=self.death_check(target)
-        return {
-            "type":"action",
-            "attacking_player_uid":caster.uid,
-            "targeted_player_uid":opponent.uid,
-            "attacking_card_index":caster.cards_list.index(self),
-            "targeted_card_index":opponent.cards_list.index(target),
-            "target_hp":target.hp,
-            "death":death_status
-        }
-
-class Card2():
-    """Base object for game cards."""
-    def __init__(self):
-        self.name="Card"
-        self.hp=30
-        self.speed=10
-
-    def death_check(self,target):
-        if target.hp<=0:
-            target.hp=0
-            return True
-        return False
-
-    def damage_calc(self,opponent,target_index,damage_number):
-        if opponent.active_card_index==target_index:
-            return damage_number
-        elif opponent.active_card_index==None:
-            return 0
-        else:
-            return math.floor(damage_number/2)
-
-    def ability1(self,caster,opponent,target,target_index):
-        target.hp-=self.damage_calc(opponent,target_index,3)
-        death_status=self.death_check(target)
-        return {
-            "type":"action",
-            "attacking_player_uid":caster.uid,
-            "targeted_player_uid":opponent.uid,
-            "attacking_card_index":caster.cards_list.index(self),
-            "targeted_card_index":opponent.cards_list.index(target),
-            "target_hp":target.hp,
-            "death":death_status
-        }
-
-    def ability2(self,caster,opponent,target,target_index):
-        target.hp-=self.damage_calc(opponent,target_index,6)
-        death_status=self.death_check(target)
-        return {
-            "type":"action",
-            "attacking_player_uid":caster.uid,
-            "targeted_player_uid":opponent.uid,
-            "attacking_card_index":caster.cards_list.index(self),
-            "targeted_card_index":opponent.cards_list.index(target),
-            "target_hp":target.hp,
-            "death":death_status
-        }
-
-    def ability3(self,caster,opponent,target,target_index):
-        target.hp-=self.damage_calc(opponent,target_index,9)
-        death_status=self.death_check(target)
-        return {
-            "type":"action",
-            "attacking_player_uid":caster.uid,
-            "targeted_player_uid":opponent.uid,
-            "attacking_card_index":caster.cards_list.index(self),
-            "targeted_card_index":opponent.cards_list.index(target),
-            "target_hp":target.hp,
-            "death":death_status
-        }
-
-class Card3():
-    """Base object for game cards."""
-    def __init__(self):
-        self.name="Card"
-        self.hp=10
-        self.speed=10
-
-    def death_check(self,target):
-        if target.hp<=0:
-            target.hp=0
-            return True
-        return False
-
-    def damage_calc(self,opponent,target_index,damage_number):
-        if opponent.active_card_index==target_index:
-            return damage_number
-        elif opponent.active_card_index==None:
-            return 0
-        else:
-            return math.floor(damage_number/2)
-
-    def ability1(self,caster,opponent,target,target_index):
-        target.hp-=self.damage_calc(opponent,target_index,10)
-        death_status=self.death_check(target)
-        return {
-            "type":"action",
-            "attacking_player_uid":caster.uid,
-            "targeted_player_uid":opponent.uid,
-            "attacking_card_index":caster.cards_list.index(self),
-            "targeted_card_index":opponent.cards_list.index(target),
-            "target_hp":target.hp,
-            "death":death_status
-        }
-
-    def ability2(self,caster,opponent,target,target_index):
-        target.hp-=self.damage_calc(opponent,target_index,20)
-        death_status=self.death_check(target)
-        return {
-            "type":"action",
-            "attacking_player_uid":caster.uid,
-            "targeted_player_uid":opponent.uid,
-            "attacking_card_index":caster.cards_list.index(self),
-            "targeted_card_index":opponent.cards_list.index(target),
-            "target_hp":target.hp,
-            "death":death_status
-        }
-
-    def ability3(self,caster,opponent,target,target_index):
-        target.hp-=self.damage_calc(opponent,target_index,50)
-        death_status=self.death_check(target)
-        return {
-            "type":"action",
-            "attacking_player_uid":caster.uid,
-            "targeted_player_uid":opponent.uid,
-            "attacking_card_index":caster.cards_list.index(self),
-            "targeted_card_index":opponent.cards_list.index(target),
-            "target_hp":target.hp,
-            "death":death_status
-        }
-
-
-
+#Defines available card types and their properties/rarity.
 card_finder={
-    "Card":[Card,1],
-    "Card2":[Card2,0.1],
-    "Card3":[Card3,0.01],
+    "Card":[cards.Card,1],
+    "Card2":[cards.Card2,0.1],
+    "Card3":[cards.Card3,0.01],
 }
+#List of valid card identifiers.
 valid_card_ids=list(card_finder.keys())
+#List of valid slot names for player decks.
 valid_slot_names=["slot1","slot2","slot3"]
 
 
@@ -237,11 +62,14 @@ def init():
 
 init()
 
+#Initializes the Flask application.
 app=Flask(__name__)
+#Initializes Flask-Sock for WebSocket support.
 sock=Sock(app)
 #Set Flask secret key from loaded settings.
 app.secret_key=settings["SECRET_KEY"]
 
+#Handles the main index page.
 @app.route("/",methods=["GET"])
 def index():
     #Initialize session login status if not present.
@@ -301,11 +129,14 @@ def login():
         )
 
 
-
+#Initializes a new player's inventory files with default cards.
 #helpers for singup
 def init_inventory(folderpath,filepaths,error):
+    #Dictionary to store potential errors during inventory initialization.
     error={}
+    #Default cards and quantities for a new player.
     initial_cards={"Card":5}
+    #Sorted list of initial card names.
     sorted_card_names=sorted(initial_cards.keys())
     try: 
         os.makedirs(folderpath,exist_ok=True)
@@ -329,7 +160,7 @@ def signup():
         confirm=request.form.get("confirm","")
 
         #Sanitize and validate username against disallowed characters/names.
-        if user["username"]!=bleach.clean(user["username"])or user["username"]==settings.get("DEFAULT_USERNAME"):
+        if user["username"]!=bleach.clean(user["username"]):
             error["bad_username"]="Bad username"
         #Validate username length.
         if len(user["username"])>settings.get("USERNAME_CHAR_LIMIT"):
@@ -527,6 +358,9 @@ def match(match_id):
             opponent_cards=player.cards_list
             break
 
+    print(cards)
+    print(opponent_cards)
+
     next_actioning_player_uid=match_data.get("next_actioning_player_uid")
 
     #Render the match interface with all necessary game state data.
@@ -563,9 +397,11 @@ def check_for_match():
 
     
 
+#Reads card data from a JSON file.
 #helpers for inventory
 def read_cards(filepath,error):
     try:
+        #Dictionary to store read card data.
         read_cards_data={}
         if os.path.exists(filepath) and os.path.getsize(filepath)>0:
             with open(filepath,'r',encoding='utf-8') as file:
@@ -574,9 +410,11 @@ def read_cards(filepath,error):
     except Exception as e:
         error["read_error"]=f"Error relating to reading card data: {e}"
 
+#Writes card data (typically non-selected cards) to a JSON file.
 def write_cards(filepath,cards_to_write,error):
     try:
         os.makedirs(os.path.dirname(filepath),exist_ok=True)
+        #Filters out cards with zero count.
         data_to_write={name: count for name, count in cards_to_write.items() if count>0}
         with open(filepath,'w',encoding='utf-8') as file:
             if "inactive"in filepath:
@@ -588,6 +426,7 @@ def write_cards(filepath,cards_to_write,error):
         error["write_error"]=f"Error relating to writing card data: {e}"
         return False
 
+#Writes active card data (selected slots) to a JSON file.
 def write_cards_active(filepath,cards_to_write,error):
     try:
         os.makedirs(os.path.dirname(filepath),exist_ok=True)
@@ -598,19 +437,24 @@ def write_cards_active(filepath,cards_to_write,error):
         error["write_error"]=f"Error relating to writing card data: {e}"
         return False
 
-
+#Manages player inventory, allowing viewing and updating selected cards.
 @app.route('/inventory', methods=['GET','POST'])
 def inventory():
     if "logged_in" not in session or not session["logged_in"]: return redirect("/")
 
+    #Dictionary to store all cards owned by the player.
     all_owned_cards={}
+    #Dictionary of cards currently in active slots.
     current_selected_cards={}
+    #Dictionary of cards owned but not in active slots.
     current_non_selected_cards={}
-
+    #Dictionary to store potential errors.
     error={}
-
+    #Path to the player's inventory directory.
     player_dir=f"inventories/{session['uid']}"
+    #Path to active cards file.
     selected_cards_path=f"{player_dir}/active_cards.json"
+    #Path to inactive cards file.
     non_selected_cards_path=f"{player_dir}/inactive_cards.json"
     if not os.path.isdir(player_dir): os.makedirs(player_dir)
 
@@ -622,6 +466,7 @@ def inventory():
         all_owned_cards={}
         current_selected_cards={}
         current_non_selected_cards={}
+        #Cards available for selection display.
         non_selected_for_display={}
         return render_template(
             'inventory.html',
@@ -645,9 +490,11 @@ def inventory():
             if not data: return jsonify(False),400
             selected_slots_from_client=data.get('selected_cards')
             if not selected_slots_from_client or not isinstance(selected_slots_from_client,dict): return jsonify(False),400
-
+            #Temporary dictionary to count cards selected by the client.
             selected_cards={}
+            #Counter for filled slots.
             num_slots_filled=0
+            #Validated slot selections from the client.
             cleaned_selection_slots={}
             for slot, card_key in selected_slots_from_client.items():
                 if slot not in valid_slot_names: return jsonify(False),400
@@ -661,11 +508,11 @@ def inventory():
 
             for card_name, selected_count in selected_cards.items():
                 if selected_count>all_owned_cards.get(card_name,0): return jsonify(False),400
-
+            #Final validated slots to save.
             new_selected_slots_to_save=cleaned_selection_slots
 
             write_cards_active(selected_cards_path,new_selected_slots_to_save,error)
-
+            #Copy of all cards to calculate new non-selected.
             new_non_selected_cards=all_owned_cards.copy()
             for name,count_to_subtract in selected_cards.items():
                 new_non_selected_cards[name]=new_non_selected_cards.get(name,0)-count_to_subtract
@@ -680,6 +527,7 @@ def inventory():
             return jsonify(False),500
 
     else:
+        #Cards available for selection display, initially all owned.
         non_selected_for_display=all_owned_cards.copy()
         # Subtract cards currently in slots (use the data read earlier)
         for slot, card_key in current_selected_cards.items():
@@ -704,16 +552,19 @@ def inventory():
         )
 
 
-
+#Simulates a single card pull based on defined rarities.
 #helper for gacha
 def pull():
+    #Generates a random float between 0.0 and 1.0.
     percentile=random.random()
+    #Stores the ID of the card pulled.
     pulled_card=""
     for card in card_finder:
         if percentile<card_finder[card][1]:
             pulled_card=card
     return pulled_card
 
+#Handles the gacha/card pulling mechanism for players.
 #gacha route
 @app.route("/gacha",methods=["GET","POST"])
 def gacha():
@@ -721,20 +572,25 @@ def gacha():
     if "logged_in" not in session or not session["logged_in"]: return redirect("/")
 
     #set paths
+    #Path to the player's inventory directory.
     player_dir=f"inventories/{session["uid"]}"
+    #Path to inactive cards file.
     non_selected_cards_path=f"{player_dir}/inactive_cards.json"
 
     #handle posts
     if request.method=="POST":
         #get data
+        #Retrieves JSON data from the POST request.
         data=request.get_json()
         if not data:return jsonify(False),400
+        #Number of cards to pull.
         amount=data.get("amount")
 
         #only allow 1 pull and 10 pull
         if amount!=1 and amount!=10: return jsonify(False),400
 
         #pull cards
+        #Dictionary to store counts of cards pulled in this transaction.
         pulled_cards={}
         for x in range(amount):
             pulled_card=pull()
@@ -745,6 +601,7 @@ def gacha():
 
         #get already owned cards that are not selected
         with open(non_selected_cards_path,"r")as file:
+            #Loads currently owned non-selected cards.
             owned_non_selected_cards=json.load(file)
 
         #add pulled cards to non selected cards
@@ -764,6 +621,14 @@ def gacha():
         "gacha.html"
         )
 
+#Checks if any player has lost all their cards (all card HPs are zero or less).
+def death_check(players):
+    for player in players:
+        #List of HPs for the current player's cards.
+        player_cards_hps=[card.hp for card in players[player].cards_list]
+        if not any(player_cards_hps):
+            return players[player].username
+    return None
 
 #WebSocket route for match communication (authentication, chat, actions).
 @sock.route("/chat/match/<match_id>")
@@ -776,25 +641,28 @@ def chat(ws,match_id):
         if not match_id.isdigit()or match_id not in active_matches:
             ws.close()
             return
-
+        #Retrieves data for the current match.
         match_data=active_matches[match_id]
+        #Dictionary of player objects in the match.
         players=match_data["players"]
 
         #Authenticate the connecting client via UID.
+        #Receives authentication message from client.
         json_auth_message=ws.receive(timeout=10)
         if json_auth_message is None:
             ws.close()
             return
+        #Parses the JSON authentication message.
         auth_message=json.loads(json_auth_message)
         if not isinstance(auth_message,dict)or auth_message.get("type")!="auth"or"uid"not in auth_message:
             ws.close()
             return
-
+        #Extracts UID from the authenticated message.
         uid=auth_message["uid"]
         if uid not in players:
             ws.close()
             return
-
+        #Player object for the authenticated client.
         player=players[uid]
         #Prevent multiple connections for the same player.
         if player.client is not None:
@@ -806,21 +674,27 @@ def chat(ws,match_id):
 
         #Main loop processing incoming messages.
         while True:
+            #Receives a message from the client.
             json_message=ws.receive()
             #Client disconnected if message is None.
             if json_message is None:
                 break
-
+            #Parses the incoming JSON message.
             message=json.loads(json_message)
 
             #Handle chat messages.
             if isinstance(message,dict)and message.get("type")=="chat"and"text"in message:
+                #Sanitizes chat message text.
                 cleaned_text=bleach.clean(message["text"]).strip()
+                #Username of the sender.
                 username=player.username
+                #Formats the message for display.
                 formatted_message=f"{username}: {cleaned_text}"
+                #Serializes message for sending.
                 message_to_send=json.dumps(formatted_message)
 
                 #Broadcast chat message to all currently connected clients in this match.
+                #List of active WebSocket clients in the match.
                 current_clients=[p.client for p in players.values()if p.client is not None]
                 for client in current_clients:
                     try:
@@ -833,47 +707,55 @@ def chat(ws,match_id):
 
             #Handle game action messages.
             elif isinstance(message,dict)and message.get("type")=="action":
+                #Ability number used (1-3).
                 #int or None
-                print(message.get("abilityNumber"))
                 ability_number=message.get("abilityNumber") if isinstance(message.get("abilityNumber"),int) and 1<=message.get("abilityNumber")<=3 else ""
+                #UID of the attacking player.
                 #str
                 attacking_player_uid=message.get("attackingPlayerUid") if message.get("attackingPlayerUid") in players.keys() else ""
+                #Index of the attacking card.
                 #int
                 attacking_card_index=message.get("attackingCardIndex") if isinstance(message.get("attackingCardIndex"),int) and 0<=message.get("attackingCardIndex")<=2 else ""
+                #UID of the targeted player.
                 #str
                 targeted_player_uid=message.get("targetedPlayerUid") if message.get("targetedPlayerUid") in players.keys() and message.get("targetedPlayerUid")!=message.get("attackingPlayerUid") else ""
+                #Index of the targeted card.
                 #int or None
                 targeted_card_index=message.get("targetedCardIndex") if isinstance(message.get("targetedCardIndex"),int) and 0<=message.get("targetedCardIndex")<=2 else ""
+                #Index of the attacker's active card.
                 #int or None
                 active_card_index=message.get("activeCardIndex") if isinstance(message.get("activeCardIndex"),int) and 0<=message.get("activeCardIndex")<=2 else ""
 
-
+                #List of values for validation.
                 values_to_check=[ability_number,attacking_player_uid,attacking_card_index,targeted_player_uid,targeted_card_index,active_card_index]
                 #ignore action if a value was not properly assigned
                 if any(isinstance(value,str)and value=="" for value in values_to_check):
-                    print(1)
                     continue # Ignore the action if an empty string is found
 
                 #Ignore action if it's not the sending player's turn.
                 if attacking_player_uid!=match_data.get("next_actioning_player_uid"):
-                    print(2)
                     continue
-
+                #The attacking card object.
                 attacking_card=players[attacking_player_uid].cards_list[attacking_card_index]
+                #The targeted card object.
                 targeted_card=players[targeted_player_uid].cards_list[targeted_card_index]
+                #The attacking player object.
                 attacking_player=players[attacking_player_uid]
+                #The targeted player object.
                 targeted_player=players[targeted_player_uid]
 
                 #Ignore action if attacking card index is not player's active card index
                 if active_card_index!=attacking_player.active_card_index:
-                    print(3)
                     continue
 
                 #Dynamically call the specified ability method on the card.
+                #Name of the ability method to call.
                 ability_name=f"ability{ability_number}"
+                #Gets the ability method from the card object.
                 ability_method=getattr(attacking_card,ability_name)
-
+                #Result of the ability execution.
                 action_result=ability_method(attacking_player,targeted_player,targeted_card,targeted_card_index)
+                #Serializes action result for sending.
                 message_to_send=json.dumps(action_result)
 
                 #Broadcast action result to all connected clients.
@@ -890,14 +772,18 @@ def chat(ws,match_id):
 
 
                 #Update whose turn it is next (the player who was targeted).
+                #UID of the next player to act.
                 next_actioning_player_uid=targeted_player_uid
                 match_data["next_actioning_player_uid"]=next_actioning_player_uid
 
                 #Prepare and broadcast the turn update message.
+                #Message detailing the turn change.
                 turn_update_message={
                     "type":"turn",
-                    "next_actioning_player_uid":next_actioning_player_uid
+                    "next_actioning_player_uid":next_actioning_player_uid,
+                    "losing_player":death_check(players)
                 }
+                #Serializes turn update for sending.
                 turn_update_to_send=json.dumps(turn_update_message)
 
                 #Re-fetch clients in case one disconnected during action broadcast.
@@ -913,8 +799,11 @@ def chat(ws,match_id):
 
             #Handle card swap messages
             elif isinstance(message,dict)and message.get("type")=="swap":
+                #UID of the player performing the swap.
                 swapping_player_uid=message["swappingPlayerUid"]
+                #UID of the opponent.
                 opponent_uid=message["opponentUid"]
+                #Index of the card to swap to.
                 swap_target_card_index=message["swapTargetCardIndex"]
 
                 #Ignore swap if it's not the sending player's turn.
@@ -924,8 +813,9 @@ def chat(ws,match_id):
                 #Ignore swap if bad index
                 if swap_target_card_index>2 or swap_target_card_index<0 or not isinstance(swap_target_card_index,int):
                     continue
-
+                #Player object performing the swap.
                 swapping_player=players[swapping_player_uid]
+                #Opponent player object.
                 opponent=players[opponent_uid]
 
                 #Ignore swap if swap target card is active card
@@ -936,12 +826,14 @@ def chat(ws,match_id):
                 swapping_player.active_card_index=swap_target_card_index
 
                 #Construct message
+                #Swap action message to broadcast.
                 message={
                     "type":"swap",
                     "swapping_player_uid":swapping_player.uid,
                     "opponent_uid":opponent.uid,
                     "swap_target_card_index":swapping_player.active_card_index
                 }
+                #Serializes swap message for sending.
                 message_to_send=json.dumps(message)
 
                 #Broadcast action result to all connected clients.
@@ -964,7 +856,8 @@ def chat(ws,match_id):
                 #Prepare and broadcast the turn update message.
                 turn_update_message={
                     "type":"turn",
-                    "next_actioning_player_uid":next_actioning_player_uid
+                    "next_actioning_player_uid":next_actioning_player_uid,
+                    "losing_player":death_check(players)
                 }
                 turn_update_to_send=json.dumps(turn_update_message)
 
@@ -995,11 +888,14 @@ def chat(ws,match_id):
                     #Only perform cleanup if the disconnecting ws is the one registered to the player.
                     if player.client==ws:
                         player.client=None #Mark player as disconnected in the game state.
+                        #Username of the disconnected player.
                         disconnected_username=player.username
 
                         #Notify the remaining player, if any, about the disconnection.
+                        #Message to notify other player.
                         disconnect_message=f"SERVER: {disconnected_username} has disconnected, redirecting in 5 seconds..."
                         message_to_send=json.dumps(disconnect_message)
+                        #Flag if the other player also disconnected during notification.
                         other_player_disconnected=False
                         for p_obj in players.values():
                             if p_obj.uid!=uid and p_obj.client is not None:
