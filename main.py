@@ -43,6 +43,16 @@ card_finder={
     "Card2":[cards.Card2,0.1],
     "Card3":[cards.Card3,0.01],
 }
+
+pool1={
+    "Card":[cards.Card,1],
+    "Card2":[cards.Card2,0.1],
+    "Card3":[cards.Card3,0.01],
+}
+
+pool_names=["gacha1"]
+pools_dict={"gacha1":pool1}
+
 #List of valid card identifiers.
 valid_card_ids=list(card_finder.keys())
 #List of valid slot names for player decks.
@@ -358,9 +368,6 @@ def match(match_id):
             opponent_cards=player.cards_list
             break
 
-    print(cards)
-    print(opponent_cards)
-
     next_actioning_player_uid=match_data.get("next_actioning_player_uid")
 
     #Render the match interface with all necessary game state data.
@@ -554,20 +561,20 @@ def inventory():
 
 #Simulates a single card pull based on defined rarities.
 #helper for gacha
-def pull():
+def pull(pool):
     #Generates a random float between 0.0 and 1.0.
     percentile=random.random()
     #Stores the ID of the card pulled.
     pulled_card=""
-    for card in card_finder:
-        if percentile<card_finder[card][1]:
+    for card in pool:
+        if percentile<pool[card][1]:
             pulled_card=card
     return pulled_card
 
 #Handles the gacha/card pulling mechanism for players.
 #gacha route
-@app.route("/gacha",methods=["GET","POST"])
-def gacha():
+@app.route("/gacha/gacha1",methods=["GET","POST"])
+def gacha1():
     #check if logged in
     if "logged_in" not in session or not session["logged_in"]: return redirect("/")
 
@@ -593,7 +600,7 @@ def gacha():
         #Dictionary to store counts of cards pulled in this transaction.
         pulled_cards={}
         for x in range(amount):
-            pulled_card=pull()
+            pulled_card=pull(pool1)
             if pulled_card in pulled_cards.keys():
                 pulled_cards[pulled_card]+=1
             else:
@@ -618,8 +625,21 @@ def gacha():
         return jsonify(pulled_cards),200
 
     return render_template(
-        "gacha.html"
+        "gacha1.html"
         )
+
+
+
+@app.route("/gacha",methods=["GET"])
+def gacha():
+    if "logged_in" not in session or not session["logged_in"]: return redirect("/")
+
+    return render_template(
+        "gacha.html",
+        pool_names=pool_names
+        )
+
+
 
 #Checks if any player has lost all their cards (all card HPs are zero or less).
 def death_check(players):
