@@ -83,7 +83,6 @@ function renderNonSelectedCards(){
     container.innerHTML=''; // Clear previous content
 
     for(let i=0;i<nonSelectedCardKeys.length;i++){
-        console.log(1)
         let cardKey=nonSelectedCardKeys[i];
         let cardCount=currentNonSelectedCards[cardKey];
         let cardDefinition=cardFinder[cardKey];

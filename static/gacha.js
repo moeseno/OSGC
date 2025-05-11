@@ -25,7 +25,7 @@ async function pull(amount){
     const payload={
         amount:amount
     };
-    const response=await fetch('/gacha',{
+    const response=await fetch(window.location.pathname,{
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify(payload)
@@ -63,7 +63,6 @@ function displayPulledCards(pulledCards,amount){
 
 //Sets the width of a single card based on its height to maintain aspect ratio.
 function setCardAspectRatio(card){
-    console.log(card)
     let height=card.offsetHeight;
     let width=0.714*height;
     card.style.width=width+"px";
