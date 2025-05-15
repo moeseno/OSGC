@@ -12,6 +12,22 @@ import csv
 import random
 import cards
 
+from routes.gacha import gacha_bp
+
+
+
+#Initializes the Flask application.
+app=Flask(__name__)
+#Initializes Flask-Sock for WebSocket support.
+sock=Sock(app)
+
+
+
+#register blueprints
+app.register_blueprint(gacha_bp)
+
+
+
 #Stores application settings.
 settings={}
 #Queue for players waiting for a match.
@@ -39,24 +55,10 @@ class Player():
 
 #Defines available card types and their properties/rarity.
 card_finder={
-    "Card":[cards.Card,1],
-    "Card2":[cards.Card2,0.1],
-    "Card3":[cards.Card3,0.01],
+    "Card":cards.Card,
+    "Card2":cards.Card2,
+    "Card3":cards.Card3,
 }
-
-pool1={
-    "Card":[cards.Card,1],
-    "Card2":[cards.Card2,0.1],
-    "Card3":[cards.Card3,0.01],
-}
-
-pool2={
-    "Card2":[cards.Card2,1],
-    "Card3":[cards.Card3,0.1]
-}
-
-pool_names=["gacha1","gacha2"]
-pools_dict={"gacha1":pool1,"gacha2":pool2}
 
 #List of valid card identifiers.
 valid_card_ids=list(card_finder.keys())
@@ -77,10 +79,6 @@ def init():
 
 init()
 
-#Initializes the Flask application.
-app=Flask(__name__)
-#Initializes Flask-Sock for WebSocket support.
-sock=Sock(app)
 #Set Flask secret key from loaded settings.
 app.secret_key=settings["SECRET_KEY"]
 
@@ -297,12 +295,12 @@ def matchmaking():
             username1=waiting_room[0].get(uid1)
             with open(f"./inventories/{uid1}/active_cards.json","r") as file:
                 card_json1=json.load(file)
-            card_list1=[card_finder[card_json1[slot]][0]() for slot in card_json1]
+            card_list1=[card_finder[card_json1[slot]]() for slot in card_json1]
             uid2=list(waiting_room[1].keys())[0]
             username2=waiting_room[1].get(uid2)
             with open(f"./inventories/{uid2}/active_cards.json","r") as file:
                 card_json2=json.load(file)
-            card_list2=[card_finder[card_json2[slot]][0]() for slot in card_json2]
+            card_list2=[card_finder[card_json2[slot]]() for slot in card_json2]
         except Exception as e:
             error["inventory"]=f"Error relating to reading inventory, matchmaking currently unavailable: {e}"
             return render_template(
@@ -561,143 +559,6 @@ def inventory():
             current_selected_cards=current_selected_cards, # Slot assignments for JS renderSelectedCards (if it expects slots)
             current_non_selected_cards=non_selected_for_display, # Calculated available counts for JS renderNonSelectedCards
             error=error
-        )
-
-
-#Simulates a single card pull based on defined rarities.
-#helper for gacha
-def pull(pool):
-    #Generates a random float between 0.0 and 1.0.
-    percentile=random.random()
-    #Stores the ID of the card pulled.
-    pulled_card=""
-    for card in pool:
-        if percentile<pool[card][1]:
-            pulled_card=card
-    return pulled_card
-
-#Handles the gacha/card pulling mechanism for players.
-#gacha route
-@app.route("/gacha/gacha1",methods=["GET","POST"])
-def gacha1():
-    #check if logged in
-    if "logged_in" not in session or not session["logged_in"]: return redirect("/")
-
-    #set paths
-    #Path to the player's inventory directory.
-    player_dir=f"inventories/{session["uid"]}"
-    #Path to inactive cards file.
-    non_selected_cards_path=f"{player_dir}/inactive_cards.json"
-
-    #handle posts
-    if request.method=="POST":
-        #get data
-        #Retrieves JSON data from the POST request.
-        data=request.get_json()
-        if not data:return jsonify(False),400
-        #Number of cards to pull.
-        amount=data.get("amount")
-
-        #only allow 1 pull and 10 pull
-        if amount!=1 and amount!=10: return jsonify(False),400
-
-        #pull cards
-        #Dictionary to store counts of cards pulled in this transaction.
-        pulled_cards={}
-        for x in range(amount):
-            pulled_card=pull(pool1)
-            if pulled_card in pulled_cards.keys():
-                pulled_cards[pulled_card]+=1
-            else:
-                pulled_cards[pulled_card]=1
-
-        #get already owned cards that are not selected
-        with open(non_selected_cards_path,"r")as file:
-            #Loads currently owned non-selected cards.
-            owned_non_selected_cards=json.load(file)
-
-        #add pulled cards to non selected cards
-        for card in pulled_cards:
-            if card in owned_non_selected_cards.keys():
-                owned_non_selected_cards[card]+=pulled_cards[card]
-            else:
-                owned_non_selected_cards[card]=pulled_cards[card]
-        
-        #write to file
-        with open(non_selected_cards_path,"w")as file:
-            json.dump(owned_non_selected_cards,file,sort_keys=True,indent=None,separators=(',',':'))
-
-        return jsonify(pulled_cards),200
-
-    return render_template(
-        "gacha1.html"
-        )
-
-
-@app.route("/gacha/gacha2",methods=["GET","POST"])
-def gacha2():
-    #check if logged in
-    if "logged_in" not in session or not session["logged_in"]: return redirect("/")
-
-    #set paths
-    #Path to the player's inventory directory.
-    player_dir=f"inventories/{session["uid"]}"
-    #Path to inactive cards file.
-    non_selected_cards_path=f"{player_dir}/inactive_cards.json"
-
-    #handle posts
-    if request.method=="POST":
-        #get data
-        #Retrieves JSON data from the POST request.
-        data=request.get_json()
-        if not data:return jsonify(False),400
-        #Number of cards to pull.
-        amount=data.get("amount")
-
-        #only allow 1 pull and 10 pull
-        if amount!=1 and amount!=10: return jsonify(False),400
-
-        #pull cards
-        #Dictionary to store counts of cards pulled in this transaction.
-        pulled_cards={}
-        for x in range(amount):
-            pulled_card=pull(pool2)
-            if pulled_card in pulled_cards.keys():
-                pulled_cards[pulled_card]+=1
-            else:
-                pulled_cards[pulled_card]=1
-
-        #get already owned cards that are not selected
-        with open(non_selected_cards_path,"r")as file:
-            #Loads currently owned non-selected cards.
-            owned_non_selected_cards=json.load(file)
-
-        #add pulled cards to non selected cards
-        for card in pulled_cards:
-            if card in owned_non_selected_cards.keys():
-                owned_non_selected_cards[card]+=pulled_cards[card]
-            else:
-                owned_non_selected_cards[card]=pulled_cards[card]
-        
-        #write to file
-        with open(non_selected_cards_path,"w")as file:
-            json.dump(owned_non_selected_cards,file,sort_keys=True,indent=None,separators=(',',':'))
-
-        return jsonify(pulled_cards),200
-
-    return render_template(
-        "gacha2.html"
-        )
-
-
-
-@app.route("/gacha",methods=["GET"])
-def gacha():
-    if "logged_in" not in session or not session["logged_in"]: return redirect("/")
-
-    return render_template(
-        "gacha.html",
-        pool_names=pool_names
         )
 
 
