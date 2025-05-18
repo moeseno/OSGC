@@ -1,23 +1,23 @@
 from flask import Blueprint,render_template,request,redirect,session,jsonify
 import json
 import random
-import cards
 
 gacha_bp=Blueprint('gacha_bp',__name__,url_prefix="/gacha")
 
-pool1={
-    "Card":[cards.Card,1],
-    "Card2":[cards.Card2,0.1],
-    "Card3":[cards.Card3,0.01],
-}
+settings={}
 
-pool2={
-    "Card2":[cards.Card2,1],
-    "Card3":[cards.Card3,0.1]
-}
+def init():
+    try: 
+        settings_filepath="settings.json"
+        with open(settings_filepath,'r',encoding='utf-8') as file:
+            loaded_settings=json.load(file)
+            settings.update(loaded_settings)
+    except Exception as e:
+        raise e
 
-pools_dict={"gacha1":pool1,"gacha2":pool2}
+init()
 
+pools=settings.get("POOLS")
 
 @gacha_bp.route("/",methods=["GET"])
 def gacha():
@@ -25,7 +25,7 @@ def gacha():
 
     return render_template(
         "gacha.html",
-        pool_names=list(pools_dict.keys())
+        pool_names=list(pools.keys())
         )
 
 
@@ -38,16 +38,16 @@ def pull(pool):
     #Stores the ID of the card pulled.
     pulled_card=""
     for card in pool:
-        if percentile<pool[card][1]:
+        if percentile<pool[card]:
             pulled_card=card
     return pulled_card
 
 #Handles the gacha/card pulling mechanism for players.
 #gacha route
 @gacha_bp.route("/<pool_name>",methods=["GET","POST"])
-def gacha1(pool_name):
+def gacha_pool(pool_name):
     #check if logged in
-    if "logged_in" not in session or not session["logged_in"] or pool_name not in pools_dict.keys(): return redirect("/")
+    if "logged_in" not in session or not session["logged_in"] or pool_name not in pools.keys(): return redirect("/")
 
     #set paths
     #Path to the player's inventory directory.
@@ -71,7 +71,7 @@ def gacha1(pool_name):
         #Dictionary to store counts of cards pulled in this transaction.
         pulled_cards={}
         for x in range(amount):
-            pulled_card=pull(pools_dict[pool_name])
+            pulled_card=pull(pools[pool_name])
             if pulled_card in pulled_cards.keys():
                 pulled_cards[pulled_card]+=1
             else:
@@ -96,5 +96,5 @@ def gacha1(pool_name):
         return jsonify(pulled_cards),200
 
     return render_template(
-        "gacha1.html"
+        "gacha_pool.html"
         )
