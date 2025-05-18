@@ -1,5 +1,20 @@
 {
-  "SECRET_KEY": "dewu ioffcfduso",
-  "USERNAME_CHAR_LIMIT": 16,
-  "PASSWORD_CHAR_LIMIT": 64
+    "SECRET_KEY": "dewu ioffcfduso",
+    "USERNAME_CHAR_LIMIT": 16,
+    "PASSWORD_CHAR_LIMIT": 64,
+    "POOLS":{
+        "pool1":{
+            "Card":1,
+            "Card2":0.1,
+            "Card3":0.01
+        },
+        "pool2":{
+            "Card2":1,
+            "Card3":0.1
+        },
+        "pool3":{
+            "Card3":1
+        }
+
+    }
 }

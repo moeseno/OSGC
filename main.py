@@ -61,7 +61,7 @@ card_finder={
 }
 
 #List of valid card identifiers.
-valid_card_ids=list(card_finder.keys())
+valid_cards=list(card_finder.keys())
 #List of valid slot names for player decks.
 valid_slot_names=["slot1","slot2","slot3"]
 
@@ -95,6 +95,8 @@ def index():
 #GET displays login form, POST handles login attempt.
 @app.route("/login",methods=["GET","POST"])
 def login():
+    if "logged_in" in session or session["logged_in"]: return redirect("/")
+
     #error for form feedback.
     error={}
 
@@ -164,6 +166,8 @@ def init_inventory(folderpath,filepaths,error):
 #GET displays signup form, POST handles signup attempt.
 @app.route("/signup",methods=["GET","POST"])
 def signup():
+    if "logged_in" in session or session["logged_in"]: return redirect("/")
+
     #error for form feedback.
     error={}
 
@@ -295,12 +299,12 @@ def matchmaking():
             username1=waiting_room[0].get(uid1)
             with open(f"./inventories/{uid1}/active_cards.json","r") as file:
                 card_json1=json.load(file)
-            card_list1=[card_finder[card_json1[slot]]() for slot in card_json1]
+            card_list1=[card_finder[card_json1[slot]]() if card_json1[slot] in valid_cards else card_finder["Card"]() for slot in card_json1]
             uid2=list(waiting_room[1].keys())[0]
             username2=waiting_room[1].get(uid2)
             with open(f"./inventories/{uid2}/active_cards.json","r") as file:
                 card_json2=json.load(file)
-            card_list2=[card_finder[card_json2[slot]]() for slot in card_json2]
+            card_list2=[card_finder[card_json2[slot]]() if card_json2[slot] in valid_cards else card_finder["Card"]() for slot in card_json2]
         except Exception as e:
             error["inventory"]=f"Error relating to reading inventory, matchmaking currently unavailable: {e}"
             return render_template(
@@ -512,7 +516,7 @@ def inventory():
                 card_key=card_key.strip()
                 cleaned_selection_slots[slot]=card_key
                 if card_key!='None':
-                    if card_key not in valid_card_ids: return jsonify(False),400   
+                    if card_key not in valid_cards: return jsonify(False),400   
                     selected_cards[card_key]=selected_cards.get(card_key,0)+1
                     num_slots_filled+=1
 
