@@ -4,6 +4,7 @@ class Card():
     """Base object for game cards."""
     def __init__(self):
         self.name="Card"
+        self.class_name="Card"
         self.hp=10
         self.speed=10
         self.ability_damages={1:1,2:2,3:3}
@@ -58,11 +59,16 @@ class Card2(Card):
         self.speed=10
         self.ability_damages={1:3,2:6,3:9}
 
-
-
 class Card3(Card):
     def __init__(self):
         self.name="Card3"
         self.hp=10
         self.speed=10
         self.ability_damages={1:10,2:20,3:50}
+
+class Default(Card):
+    def __init__(self):
+        self.name="No card"
+        self.hp=0
+        self.speed=0
+        self.ability_damages={1:0,2:0,3:0}

@@ -10,10 +10,6 @@
 </head>
 <body>
 
-<script type="text/javascript">
-	let lastClickedCardData=null;
-</script>
-
 <div class="main-container">
 	<form class="inventory-form">
 		<div class="selected-cards"></div>
@@ -30,7 +26,8 @@
 	let currentSelectedCards={{current_selected_cards|tojson}};
 	let currentNonSelectedCards={{current_non_selected_cards|tojson}};
 </script>
-<script type="text/javascript" src="/static/inventory.js"></script>
+<script type="text/javascript" src="../static/cards.js"></script>
+<script type="text/javascript" src="../static/inventory.js"></script>
 
 </body>
 </html>

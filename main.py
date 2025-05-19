@@ -53,15 +53,6 @@ class Player():
         self.active_card_index=None
 
 
-#Defines available card types and their properties/rarity.
-card_finder={
-    "Card":cards.Card,
-    "Card2":cards.Card2,
-    "Card3":cards.Card3,
-}
-
-#List of valid card identifiers.
-valid_cards=list(card_finder.keys())
 #List of valid slot names for player decks.
 valid_slot_names=["slot1","slot2","slot3"]
 
@@ -80,7 +71,13 @@ def init():
 init()
 
 #Set Flask secret key from loaded settings.
-app.secret_key=settings["SECRET_KEY"]
+app.secret_key=settings.get("SECRET_KEY")
+
+#List of valid card identifiers.
+valid_cards=settings.get("CARDS")
+
+#Defines available card types and their properties/rarity.
+card_finder={card:getattr(cards,card) for card in valid_cards} 
 
 #Handles the main index page.
 @app.route("/",methods=["GET"])
@@ -95,7 +92,8 @@ def index():
 #GET displays login form, POST handles login attempt.
 @app.route("/login",methods=["GET","POST"])
 def login():
-    if "logged_in" in session or session["logged_in"]: return redirect("/")
+    print(session)
+    if session.get("logged_in",True): return redirect("/")
 
     #error for form feedback.
     error={}
@@ -159,6 +157,8 @@ def init_inventory(folderpath,filepaths,error):
             with open(filepath,"w",encoding="utf-8")as file:
                 if "inactive_cards" in filepath:
                     json.dump(initial_cards,file,sort_keys=True,indent=None,separators=(',',':'))
+                else:
+                    json.dump({},file)
     except Exception as e:
         error["inventory_error"]=f"An inventory related error occured: {e}"
 
@@ -166,7 +166,7 @@ def init_inventory(folderpath,filepaths,error):
 #GET displays signup form, POST handles signup attempt.
 @app.route("/signup",methods=["GET","POST"])
 def signup():
-    if "logged_in" in session or session["logged_in"]: return redirect("/")
+    if session.get("logged_in",True): return redirect("/")
 
     #error for form feedback.
     error={}
@@ -264,7 +264,7 @@ def logout():
 @app.route("/matchmaking",methods=["GET"])
 def matchmaking():
     #Ensure user is logged in.
-    if "logged_in" not in session or not session["logged_in"]: return redirect("/")
+    if not session.get("logged_in",False): return redirect("/")
 
     #for flagging errors
     error={}
@@ -299,14 +299,17 @@ def matchmaking():
             username1=waiting_room[0].get(uid1)
             with open(f"./inventories/{uid1}/active_cards.json","r") as file:
                 card_json1=json.load(file)
-            card_list1=[card_finder[card_json1[slot]]() if card_json1[slot] in valid_cards else card_finder["Card"]() for slot in card_json1]
+            card_list1=[card_finder[card_json1[slot]]() if card_json1[slot] in valid_cards else card_finder[settings.get("DEFAULT_CARD")]() for slot in card_json1]
+
             uid2=list(waiting_room[1].keys())[0]
             username2=waiting_room[1].get(uid2)
             with open(f"./inventories/{uid2}/active_cards.json","r") as file:
                 card_json2=json.load(file)
-            card_list2=[card_finder[card_json2[slot]]() if card_json2[slot] in valid_cards else card_finder["Card"]() for slot in card_json2]
+            card_list2=[card_finder[card_json2[slot]]() if card_json2[slot] in valid_cards else card_finder[settings.get("DEFAULT_CARD")]() for slot in card_json2]
+
         except Exception as e:
             error["inventory"]=f"Error relating to reading inventory, matchmaking currently unavailable: {e}"
+            raise e
             return render_template(
                 "matchmaking.html",
                 error=error
@@ -347,7 +350,7 @@ def matchmaking():
 @app.route("/match/<match_id>",methods=["GET"])
 def match(match_id):
     #Redirect if not logged in.
-    if "logged_in" not in session or not session["logged_in"]: return redirect("/")
+    if not session.get("logged_in",False): return redirect("/")
     #Validate match_id format.
     if not match_id.isdigit(): return redirect("/")
     #Check if the requested match actually exists.
@@ -387,7 +390,8 @@ def match(match_id):
         cards=cards,
         opponent_cards=opponent_cards,
         opponent_uid=opponent_uid,
-        next_actioning_player_uid=next_actioning_player_uid
+        next_actioning_player_uid=next_actioning_player_uid,
+        default_card=settings.get("DEFAULT_CARD")
         )
 
 
@@ -395,7 +399,7 @@ def match(match_id):
 #API endpoint for polling match status (used by waiting clients).
 @app.route("/check_for_match",methods=["GET"])
 def check_for_match():
-    if "logged_in" not in session or not session["logged_in"]:
+    if not session.get("logged_in",False):
         return jsonify({"matched":False})
 
     try:
@@ -454,7 +458,7 @@ def write_cards_active(filepath,cards_to_write,error):
 #Manages player inventory, allowing viewing and updating selected cards.
 @app.route('/inventory', methods=['GET','POST'])
 def inventory():
-    if "logged_in" not in session or not session["logged_in"]: return redirect("/")
+    if not session.get("logged_in",False): return redirect("/")
 
     #Dictionary to store all cards owned by the player.
     all_owned_cards={}
@@ -569,11 +573,16 @@ def inventory():
 
 #Checks if any player has lost all their cards (all card HPs are zero or less).
 def death_check(players):
+    dead_players=[]
     for player in players:
         #List of HPs for the current player's cards.
         player_cards_hps=[card.hp for card in players[player].cards_list]
         if not any(player_cards_hps):
-            return players[player].username
+            dead_players.append(players[player].username)
+    if len(dead_players)==2:
+        return True
+    elif len(dead_players)==1:
+        return dead_players[0]
     return None
 
 #WebSocket route for match communication (authentication, chat, actions).

@@ -21,7 +21,7 @@ pools=settings.get("POOLS")
 
 @gacha_bp.route("/",methods=["GET"])
 def gacha():
-    if "logged_in" not in session or not session["logged_in"]: return redirect("/")
+    if not session.get("logged_in",False): return redirect("/")
 
     return render_template(
         "gacha.html",
@@ -47,7 +47,7 @@ def pull(pool):
 @gacha_bp.route("/<pool_name>",methods=["GET","POST"])
 def gacha_pool(pool_name):
     #check if logged in
-    if "logged_in" not in session or not session["logged_in"] or pool_name not in pools.keys(): return redirect("/")
+    if not session.get("logged_in",False) or pool_name not in pools.keys(): return redirect("/")
 
     #set paths
     #Path to the player's inventory directory.

@@ -25,7 +25,7 @@
     <div class="card-container">
         {%set card_names=[]%}
         {% for card in opponent_cards %}
-        <div class="card opponent-card" onclick="setTarget(this,{{loop.index0}})" data-name="{{card.name}}"> 
+        <div class="card opponent-card" {% if card.__class__.__name__!=default_card %} onclick="setTarget(this,{{loop.index0}})" {%endif%} data-name="{{card.name}}"> 
             {{card.name}}
             <div class="hp">
             	{{card.hp}}
@@ -45,10 +45,12 @@
             <div class="hp">
             	{{card.hp}}
             </div>
+            {% if card.__class__.__name__!=default_card %}
             <button onclick="useAbility('{{uid}}',{{loop.index0}},1,'{{opponent_uid}}')" class="ability">a1</button>
             <button onclick="useAbility('{{uid}}',{{loop.index0}},2,'{{opponent_uid}}')" class="ability">a2</button>
             <button onclick="useAbility('{{uid}}',{{loop.index0}},3,'{{opponent_uid}}')" class="ability">a3</button>
             <button onclick="swap('{{uid}}',{{loop.index0}},'{{opponent_uid}}')" class="ability">swap</button>
+            {%endif%}
         </div>
         {% endfor %}
 	</div>
@@ -60,6 +62,7 @@
     let nextActioningPlayerUid="{{next_actioning_player_uid}}";
 </script>
 
+<script type="text/javascript" src="../static/cards.js"></script>
 <script type="text/javascript" src="../static/match.js"></script>
 
 </body>
