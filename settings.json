@@ -1,3 +1,5 @@
+//THIS MIGHT NOT BE THE ONLY FILE YOU NEED TO TWEAK!!! PLEASE READ NOTES BELOW
+
 {
     "SECRET_KEY": "dewu ioffcfduso",
     "USERNAME_CHAR_LIMIT": 16,
@@ -15,6 +17,28 @@
         "pool3":{
             "Card3":1
         }
-
-    }
+    },
+    "CARDS":[
+        "Card",
+        "Card2",
+        "Card3",
+        "Default"
+    ],
+    "DEFAULT_CARD":"Default"
 }
+
+//NOTES:
+//when adding pools, the cards in those pools must be in CARDS
+//in my example pool 1, Card has a 90% chance of being drawn, Card2 9% and card3 1%
+//a default card must be set for when a player enters a match with a slot empty
+
+//when adding custom cards, they must have a corresponding class in the cards.py file with its CLASS NAME entered as a string in the CARDS array
+
+//additional cards also should have a corresponding css class (see cards.css and cards.js)
+
+//for the cardFinder object in the cards.js file, the key should match with the class name written in the CARDS array
+//while the className thingy should match with the css class you want to assign to your custom card
+//cardName is the display name of your card, you preferrably want to match it with the name you gave your custom card in cards.py for consistency
+
+//path to cards.js: /static/cards.js
+//path to cards.css: /static/css/cards.css

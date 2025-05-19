@@ -1,3 +1,6 @@
+let lastClickedCardData=null;
+
+
 //Sets the width of a single card based on its height to maintain aspect ratio.
 function setCardAspectRatio(card){
     let height=card.offsetHeight;
@@ -5,26 +8,9 @@ function setCardAspectRatio(card){
     card.style.width=width+"px";
 }
 
-// Defines card types, their display properties
-let cardFinder={
-    Card:{className:"default",cardName:"Card"},
-    None:{className:"none",cardName:"None"},
-    Card2:{className:"default2",cardName:"Card2"},
-    Card3:{className:"default3",cardName:"Card3"},
-    Card4:{className:"default4",cardName:"Card4"},
-    Card5:{className:"default5",cardName:"Card5"},
-    Card6:{className:"default6",cardName:"Card6"},
-    Card7:{className:"default7",cardName:"Card7"},
-    Card8:{className:"default8",cardName:"Card8"},
-    Card9:{className:"default9",cardName:"Card9"},
-    Cardq:{className:"defaultq",cardName:"Cardq"},
-    Cardw:{className:"defaultw",cardName:"Cardw"},
-    Carde:{className:"defaulte",cardName:"Carde"},
-    Cardr:{className:"defaultr",cardName:"Cardr"},
-    Cardt:{className:"defaultt",cardName:"Cardt"},
-    Cardy:{className:"defaulty",cardName:"Cardy"},
-};
-
+function clearSelection() {
+    lastClickedCardData=null;
+}
 
 // Renders the selection slots based on initial CARD COUNTS state
 function renderSelectedCards(){
