@@ -1,5 +1,6 @@
 from flask_sock import Sock
 from flask import Flask,render_template,request,redirect,session,jsonify
+from flask_bcrypt import Bcrypt
 import jinja2
 import json
 import bleach
@@ -18,7 +19,8 @@ from routes.gacha import gacha_bp
 app=Flask(__name__)
 #Initializes Flask-Sock for WebSocket support.
 sock=Sock(app)
-
+#Initializes bycrypt for password encryption.
+bcrypt=Bcrypt(app)
 
 
 #register blueprints
@@ -90,8 +92,7 @@ def index():
 #GET displays login form, POST handles login attempt.
 @app.route("/login",methods=["GET","POST"])
 def login():
-    print(session)
-    if session.get("logged_in",True): return redirect("/")
+    if session.get("logged_in"): return redirect("/")
 
     #error for form feedback.
     error={}
@@ -115,7 +116,7 @@ def login():
                 for user in users:
                     if login_attempt["username"]==user["username"]:
                         #Username found, check password.
-                        if login_attempt["password"]==user["password"]:
+                        if bcrypt.check_password_hash(user["password"],login_attempt["password"].encode('utf-8')):
                             #Login successful.
                             session["username"]=user["username"]
                             session["uid"]=user["uid"]
@@ -164,7 +165,7 @@ def init_inventory(folderpath,filepaths,error):
 #GET displays signup form, POST handles signup attempt.
 @app.route("/signup",methods=["GET","POST"])
 def signup():
-    if session.get("logged_in",True): return redirect("/")
+    if session.get("logged_in"): return redirect("/")
 
     #error for form feedback.
     error={}
@@ -174,21 +175,22 @@ def signup():
         user={"username":request.form.get("username",""),"password":request.form.get("password","")}
         confirm=request.form.get("confirm","")
 
+        #Check password confirmation match.
+        if user["password"]!=confirm:
+            error["different_password"]="Passwordss are different"
+        #Validate password length and hash
+        if len(user["password"])>settings.get("PASSWORD_CHAR_LIMIT"):
+            error["password_too_long"]="Password must be 64 characters or less"
+        user["password"]=bcrypt.generate_password_hash(user["password"].encode('utf-8')).decode('utf-8')
         #Sanitize and validate username against disallowed characters/names.
         if user["username"]!=bleach.clean(user["username"]):
             error["bad_username"]="Bad username"
         #Validate username length.
         if len(user["username"])>settings.get("USERNAME_CHAR_LIMIT"):
             error["username_too_long"]="Username must be 16 characters or less"
-        #Validate password length
-        if len(user["password"])>settings.get("PASSWORD_CHAR_LIMIT"):
-            error["password_too_long"]="Password must be 64 characters or less"
         #Check for empty fields.
         if "" in user.values():
             error["missing_value"]="Missing password or username"
-        #Check password confirmation match.
-        if user["password"]!=confirm:
-            error["different_password"]="Passwordss are different"
 
         #Proceed only if initial validations pass.
         if not error:
