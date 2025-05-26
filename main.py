@@ -1,7 +1,6 @@
 from flask_sock import Sock
 from flask import Flask,render_template,request,redirect,session,jsonify
 import jinja2
-from datetime import timedelta
 import json
 import bleach
 import sys
@@ -13,7 +12,6 @@ import random
 import cards
 
 from routes.gacha import gacha_bp
-
 
 
 #Initializes the Flask application.
